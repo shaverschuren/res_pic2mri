@@ -1,0 +1,39 @@
+# -------------------------
+# Local configuration
+# -------------------------
+# Config file containing private paths
+config.yaml
+
+# -------------------------
+# Python artifacts
+# -------------------------
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Virtual environments
+venv/
+env/
+*.env
+
+# -------------------------
+# OS files
+# -------------------------
+.DS_Store
+Thumbs.db
+
+# -------------------------
+# 3D Slicer / MRI outputs
+# -------------------------
+# Make sure not to track large medical image files
+*.nii.gz
+*.mgz
+*.stl
+*.png
+*.jpg
+
+# -------------------------
+# Logs
+# -------------------------
+*.log
