@@ -33,10 +33,10 @@ def load_config(config_path=os.path.join(os.path.dirname(__file__), "config.yaml
         cfg = yaml.safe_load(f)
     
     # Check if paths exist
-    if not os.path.exists(cfg["slicer_path"]):
-        raise FileNotFoundError(f"Slicer executable not found at '{cfg['slicer_path']}'")
-    if not os.path.exists(cfg["root"]):
-        raise FileNotFoundError(f"Root directory not found at '{cfg['root']}'")
+    if not os.path.exists(cfg["slicer_exe_path"]):
+        raise FileNotFoundError(f"Slicer executable not found at '{cfg['slicer_exe_path']}'")
+    if not os.path.exists(cfg["data_dir"]):
+        raise FileNotFoundError(f"Root directory not found at '{cfg['data_dir']}'")
 
     return cfg
 
@@ -47,7 +47,7 @@ def main_slicer_loop(data_dir, slicer_executable, patient_dir_regex="RESP*", rep
     patient_dirs = sorted(glob.glob(os.path.join(data_dir, patient_dir_regex)))
 
     # Loop
-    for patient_dir in patient_dirs:
+    for patient_dir in patient_dirs[45:]:
         # Get paths
         patient_id = os.path.split(os.path.basename(patient_dir))[-1]
         # t1 = os.path.join(patient_dir, "mri", "orig", "001.mgz")
@@ -111,8 +111,8 @@ def main_slicer_loop(data_dir, slicer_executable, patient_dir_regex="RESP*", rep
         # OK
         print("\033[92mOK\033[0m", flush=True)
 
-        # # TODO: Enable loop, break now for testing
-        # break
+        # TODO: Enable loop, break now for testing
+        break
 
 if __name__ == "__main__":
     # Create or load config, set path variables
