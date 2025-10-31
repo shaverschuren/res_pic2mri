@@ -10,6 +10,7 @@ import glob
 import subprocess
 import process_photograph as pic
 import yaml
+from tqdm import tqdm
 
 def load_config(config_path=os.path.join(os.path.dirname(__file__), "config.yaml")):
     """
@@ -50,7 +51,8 @@ def main_slicer_loop(mri_data_dir, pic_data_dir, slicer_executable, patient_dir_
     patient_dirs = sorted(glob.glob(os.path.join(mri_data_dir, patient_dir_regex)))
 
     # Loop
-    for patient_dir in patient_dirs:
+    print(f"Found {len(patient_dirs)} patient directories to process.")
+    for patient_dir in tqdm(patient_dirs, desc="Processing patients:", unit="pt"):
         # Get paths
         patient_id = os.path.split(os.path.basename(patient_dir))[-1]
         # t1 = os.path.join(patient_dir, "mri", "orig", "001.mgz")
@@ -66,9 +68,14 @@ def main_slicer_loop(mri_data_dir, pic_data_dir, slicer_executable, patient_dir_
         figure_path = os.path.join(output_dir, f"{patient_id}_photo_with_masks.png")
         resection_mask_path = os.path.join(output_dir, f"{patient_id}_resection_mask.nii.gz")
 
+        # Pass if missing photo directory
+        if not os.path.exists(os.path.join(pic_data_dir, patient_id)):
+            tqdm.write(f"No photograph data found for {patient_id}, skipping patient.")
+            continue
+
         # Pass if resection mask already exists
         if os.path.exists(resection_mask_path) and not reprocess:
-            print(f"Resection mask already exists for {patient_id}, skipping patient.")
+            tqdm.write(f"Resection mask already exists for {patient_id}, skipping patient.")
             continue
 
         # Create output dir if needed
@@ -78,19 +85,19 @@ def main_slicer_loop(mri_data_dir, pic_data_dir, slicer_executable, patient_dir_
         # Draw masks
         if not os.path.exists(mask_path):
             # Find photograph path and copy to output dir
-            pic_path = pic.find_pic_path(patient_id, picture_root=pic_data_dir, copy_dir=output_dir)
+            pic_path = pic.find_pic_path(patient_id, picture_root=pic_data_dir, copy_dir=output_dir, tqdm_handle=tqdm)
             if pic_path:
-                print(f"Drawing masks for {patient_id}...")
-                masks_drawn = pic.draw_photo_masks(pic_path, save_path=mask_path)
+                tqdm.write(f"Drawing masks for {patient_id}...")
+                masks_drawn = pic.draw_photo_masks(pic_path, save_path=mask_path, tqdm_handle=tqdm)
             else:
                 masks_drawn = False
         else:
-            print(f"Masks already exist for {patient_id}, skipping drawing.")
+            tqdm.write(f"Masks already exist for {patient_id}, skipping drawing.")
             pic_path = os.path.join(output_dir, f"{patient_id}_resection_photo.jpg")
             masks_drawn = True
 
         if not masks_drawn:
-            print(f"Skipping {patient_id} (no masks drawn).")
+            tqdm.write(f"Skipping {patient_id} (no masks drawn).")
             continue
 
         # Plot photo with masks
@@ -100,7 +107,7 @@ def main_slicer_loop(mri_data_dir, pic_data_dir, slicer_executable, patient_dir_
         viewer_pid = pic.open_image_viewer(figure_path)
 
         # Open Slicer and wait
-        print(f"Processing {patient_dir} in 3D Slicer...", end=' ', flush=True)
+        tqdm.write(f"Processing {patient_dir} in 3D Slicer...")
         subprocess.run([
             slicer_executable,
             "--python-script", os.path.join(os.path.dirname(__file__), "slicer_script.py"),
@@ -112,7 +119,7 @@ def main_slicer_loop(mri_data_dir, pic_data_dir, slicer_executable, patient_dir_
         # Finished with Slicer, close photo
         pic.close_image_viewer(viewer_pid)
         # OK
-        print("\033[92mOK\033[0m", flush=True)
+        tqdm.write("\033[92mDONE\033[0m")
 
 if __name__ == "__main__":
     # Create or load config, set path variables

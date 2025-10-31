@@ -10,6 +10,7 @@ from matplotlib.path import Path
 import tkinter as tk
 from tkinter import filedialog
 import subprocess, platform
+from tqdm import tqdm
 
 def open_image_viewer(path):
     system = platform.system()
@@ -38,8 +39,11 @@ def close_image_viewer(process):
     else:  # Linux
         process.terminate()  # Close eog
 
-def find_pic_path(patient_id, picture_root, copy_dir=None):
+def find_pic_path(patient_id, picture_root, copy_dir=None, tqdm_handle=None):
     """Find the path to the intraoperative photograph for a given patient ID. If copy_dir is provided, copy the file there."""
+
+    # Define logging function
+    log = tqdm_handle.write if tqdm_handle else print
 
     # Define patient root
     patient_root = os.path.join(picture_root, patient_id)
@@ -75,8 +79,8 @@ def find_pic_path(patient_id, picture_root, copy_dir=None):
         matching_file = matching_files[0]
     else:
         # Prompt user to select image if multiple or none found
-        print(f"Could not uniquely identify photograph for patient ID {patient_id}.")
-        print(f"Please select the correct photograph file from the dialog.")
+        log(f"Could not uniquely identify photograph for patient ID {patient_id}.")
+        log(f"Please select the correct photograph file from the dialog.")
         # Open dialog
         root = tk.Tk()
         root.withdraw()  # hide main window
@@ -88,7 +92,7 @@ def find_pic_path(patient_id, picture_root, copy_dir=None):
             filetypes=[("JPEG files", "*.jpg *.jpeg"), ("PNG files", "*.png"), ("All files", "*.*")]
         )
         if not matching_file:
-            print("No file selected. Aborting patient.")
+            log("No file selected. Aborting patient.")
             return None
 
     # Optionally copy
@@ -100,11 +104,14 @@ def find_pic_path(patient_id, picture_root, copy_dir=None):
     else:
         return matching_file
 
-def draw_photo_masks(photo_path, save_path=None):
+def draw_photo_masks(photo_path, save_path=None, tqdm_handle=None):
     """
     Draw two masks (resection & outside) on the photograph and save to .npz.
     Double-click closes the polygon. Press ENTER to confirm each selection.
     """
+
+    # Define logging function
+    log = tqdm_handle.write if tqdm_handle else print
 
     img = np.array(Image.open(photo_path).convert("RGB"))
     h, w, _ = img.shape
@@ -141,7 +148,7 @@ def draw_photo_masks(photo_path, save_path=None):
     fig.canvas.mpl_connect("key_press_event", on_key)
 
     # Wait for ENTER after first polygon
-    print("Draw resection area → double-click to close → press ENTER to continue.")
+    log("Draw resection area → double-click to close → press ENTER to continue.")
     while not mask_done[0]:
         plt.pause(0.1)
 
@@ -161,7 +168,7 @@ def draw_photo_masks(photo_path, save_path=None):
         fig.canvas.draw_idle()
     selector.onselect = onselect_2  # attach proper handler
 
-    print("Draw outside area → double-click to close → press ENTER to finish.")
+    log("Draw outside area → double-click to close → press ENTER to finish.")
     while not mask_done[0]:
         plt.pause(0.1)
 
@@ -175,13 +182,13 @@ def draw_photo_masks(photo_path, save_path=None):
     np.savez_compressed(save_path,
                         resection_mask=resection_mask,
                         outside_mask=outside_mask)
-    print(f"Masks saved to {save_path}")
+    log(f"Masks saved to {save_path}")
     return True
 
 def show_photo_with_masks(photo_path, mask_path, save_path=None,
                           resection_color=(0, 0.7, 0, 0.4),
                           outside_color=(0, 0, 0, 0.6),
-                          figsize=(10, 10)):
+                          figsize=(10, 10), tqdm_handle=None):
     """
     Display the photograph with resection and outside masks overlayed.
 
@@ -203,6 +210,9 @@ def show_photo_with_masks(photo_path, mask_path, save_path=None,
     (fig, ax)
         Matplotlib figure and axes handles for further customization.
     """
+
+    # Define logging function
+    log = tqdm_handle.write if tqdm_handle else print
 
     with plt.ioff():
         # Load image and masks
@@ -242,7 +252,7 @@ def show_photo_with_masks(photo_path, mask_path, save_path=None,
         plt.tight_layout()
         if save_path is not None:
             plt.savefig(save_path, dpi=300)
-            print(f"Figure saved to {save_path}")
+            log(f"Figure saved to {save_path}")
             plt.close()
         else:
             plt.show()
