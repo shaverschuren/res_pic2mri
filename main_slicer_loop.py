@@ -24,7 +24,8 @@ def load_config(config_path=os.path.join(os.path.dirname(__file__), "config.yaml
         with open(config_path, "w") as f:
             yaml.dump({
             "slicer_exe_path": "C:\\Path\\To\\Slicer.exe",
-            "data_dir": "C:\\Path\\To\\Data\\Root\\Directory"
+            "mri_data_dir": "C:\\Path\\To\\Data\\Root\\Directory",
+            "pic_data_dir": "C:\\Path\\To\\Photograph\\Root\\Directory"
             }, f)
         exit(0)  # Exit so user can edit paths
     
@@ -35,19 +36,21 @@ def load_config(config_path=os.path.join(os.path.dirname(__file__), "config.yaml
     # Check if paths exist
     if not os.path.exists(cfg["slicer_exe_path"]):
         raise FileNotFoundError(f"Slicer executable not found at '{cfg['slicer_exe_path']}'")
-    if not os.path.exists(cfg["data_dir"]):
-        raise FileNotFoundError(f"Root directory not found at '{cfg['data_dir']}'")
+    if not os.path.exists(cfg["mri_data_dir"]):
+        raise FileNotFoundError(f"Root directory not found at '{cfg['mri_data_dir']}'")
+    if not os.path.exists(cfg["pic_data_dir"]):
+        raise FileNotFoundError(f"Photograph root directory not found at '{cfg['pic_data_dir']}'")
 
     return cfg
 
-def main_slicer_loop(data_dir, slicer_executable, patient_dir_regex="RESP*", reprocess=False):
+def main_slicer_loop(mri_data_dir, pic_data_dir, slicer_executable, patient_dir_regex="RESP*", reprocess=False):
     """Open each patient in 3D slicer for manual photo to MRI registration."""
 
     # Get patient dirs
-    patient_dirs = sorted(glob.glob(os.path.join(data_dir, patient_dir_regex)))
+    patient_dirs = sorted(glob.glob(os.path.join(mri_data_dir, patient_dir_regex)))
 
     # Loop
-    for patient_dir in patient_dirs[45:]:
+    for patient_dir in patient_dirs:
         # Get paths
         patient_id = os.path.split(os.path.basename(patient_dir))[-1]
         # t1 = os.path.join(patient_dir, "mri", "orig", "001.mgz")
@@ -75,7 +78,7 @@ def main_slicer_loop(data_dir, slicer_executable, patient_dir_regex="RESP*", rep
         # Draw masks
         if not os.path.exists(mask_path):
             # Find photograph path and copy to output dir
-            pic_path = pic.find_pic_path(patient_id, copy_dir=output_dir)
+            pic_path = pic.find_pic_path(patient_id, picture_root=pic_data_dir, copy_dir=output_dir)
             if pic_path:
                 print(f"Drawing masks for {patient_id}...")
                 masks_drawn = pic.draw_photo_masks(pic_path, save_path=mask_path)
@@ -111,13 +114,11 @@ def main_slicer_loop(data_dir, slicer_executable, patient_dir_regex="RESP*", rep
         # OK
         print("\033[92mOK\033[0m", flush=True)
 
-        # TODO: Enable loop, break now for testing
-        break
-
 if __name__ == "__main__":
     # Create or load config, set path variables
     cfg = load_config()
     slicer_exe_path = cfg["slicer_exe_path"]
-    data_dir = cfg["data_dir"]
+    mri_data_dir = cfg["mri_data_dir"]
+    pic_data_dir = cfg["pic_data_dir"]
     # Run main function
-    main_slicer_loop(data_dir, slicer_exe_path)
+    main_slicer_loop(mri_data_dir, pic_data_dir, slicer_exe_path)

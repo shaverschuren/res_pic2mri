@@ -38,7 +38,7 @@ def close_image_viewer(process):
     else:  # Linux
         process.terminate()  # Close eog
 
-def find_pic_path(patient_id, picture_root="L:\\Respect-leijten\\0_Reports\\Pictures_aECoG", copy_dir=None):
+def find_pic_path(patient_id, picture_root, copy_dir=None):
     """Find the path to the intraoperative photograph for a given patient ID. If copy_dir is provided, copy the file there."""
 
     # Define patient root
