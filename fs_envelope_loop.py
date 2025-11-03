@@ -1,6 +1,8 @@
 import os
 import glob
 import subprocess
+from tqdm import tqdm
+from main_slicer_loop import load_config
 
 def slicer_loop(root_dir, slicer_executable):
     """
@@ -23,7 +25,7 @@ def slicer_loop(root_dir, slicer_executable):
     )
 
     # Loop
-    for patient_dir in patient_dirs:
+    for patient_dir in tqdm(patient_dirs, desc="Processing patients:", unit="pt"):
         # Get paths
         patient_id = os.path.split(os.path.basename(patient_dir))[-1]
         t1 = os.path.join(patient_dir, "mri", "T1.nii")
@@ -35,7 +37,7 @@ def slicer_loop(root_dir, slicer_executable):
 
         if not os.path.exists(lh_envelope) or not os.path.exists(rh_envelope) or not os.path.exists(brain_envelope):
             # Open Slicer and wait
-            print(f"Processing {patient_dir} in 3D Slicer...", end=' ', flush=True)
+            tqdm.write(f"Processing {patient_dir} in 3D Slicer...")
             subprocess.run([
                 slicer_executable, "--no-main-window",
                 "--python-script", os.path.join(os.path.dirname(__file__), "slicer_script.py"),
@@ -43,14 +45,13 @@ def slicer_loop(root_dir, slicer_executable):
                 "--lh_envelope_path", lh_envelope, "--rh_envelope_path", rh_envelope,
                 "--brain_envelope_path", brain_envelope, "--create_envelope_mode"
             ])
-            # Finished with Slicer
-            print("\033[92mOK\033[0m", flush=True)
         else:
-            print(f"Envelopes already exist for {patient_id}, skipping.")
+            tqdm.write(f"Envelopes already exist for {patient_id}, skipping.")
 
 if __name__ == "__main__":
-    # Set paths
-    slicer_path = "C:\\Users\\sversch6\\AppData\\Local\\slicer.org\\Slicer 5.8.1\\Slicer.exe"
-    root = "L:\\her_knf_golf\\Wetenschap\\newtransport\\Sjors\\data\\mri_search\\freesurfer"
+    # Create or load config, set path variables
+    cfg = load_config()
+    slicer_exe_path = cfg["slicer_exe_path"]
+    mri_data_dir = cfg["mri_data_dir"]
     # Run function
-    slicer_loop(root, slicer_path)
+    slicer_loop(mri_data_dir, slicer_exe_path)
