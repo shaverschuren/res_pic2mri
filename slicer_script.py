@@ -121,12 +121,18 @@ def load_inputs(t1_path, ribbon_path, lh_pial_path, rh_pial_path, lh_envelope_pa
         print("Envelope surfaces not found. Creating from pial surfaces (this may take a minute)...")
         slicer.app.processEvents()
         # Create envelope models from pial surfaces
-        lh_envelopeNode, rh_envelopeNode, brain_envelopeNode = util.create_envelopes(
-            lh_pialNode, rh_pialNode, surf_dir=os.path.dirname(lh_envelope_path))
+        try:
+            lh_envelopeNode, rh_envelopeNode, brain_envelopeNode = util.create_envelopes(
+                lh_pialNode, rh_pialNode, surf_dir=os.path.dirname(lh_envelope_path))
+        except Exception as e:
+            print("Error creating envelope surfaces:", e)
+            if create_env_mode:
+                print("In envelope creation mode, exiting Slicer.")
+                slicer.app.quit()
 
     # If in create envelope mode, skip loading photo and return here
     if create_env_mode:
-        return None, None, None, lh_envelopeNode, rh_envelopeNode, brain_envelopeNode, None
+        return None, None, None, None, lh_envelopeNode, rh_envelopeNode, brain_envelopeNode, None
 
     # T1 volume
     print("Loading reference T1:", t1_path)
@@ -179,7 +185,7 @@ def load_inputs(t1_path, ribbon_path, lh_pial_path, rh_pial_path, lh_envelope_pa
     brain_envelopeDisplayNode.SetOpacity(0.8)
     brain_envelopeDisplayNode.SetVisibility(True)
 
-    return t1Node, ribbonNode, lh_pialNode, rh_pialNode, lh_envelopeNode, rh_envelopeNode, brain_envelopeNode,photoVolumeNode
+    return t1Node, ribbonNode, lh_pialNode, rh_pialNode, lh_envelopeNode, rh_envelopeNode, brain_envelopeNode, photoVolumeNode
 
 # Create a plane model which will receive the texture
 def create_textured_plane(photoVolumeNode, planeName="PhotoPlane", width=120.0, height=120.0, opacity=0.6):
