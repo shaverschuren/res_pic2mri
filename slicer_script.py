@@ -99,17 +99,21 @@ def load_inputs(t1_path, ribbon_path, lh_pial_path, rh_pial_path, lh_envelope_pa
     # Pial surfaces
     print("Loading L pial surface (FreeSurfer curve):", lh_pial_path)
     lh_pialNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLModelNode", "lh_pial")
-    _ = read_fs_surf(lh_pial_path, lh_pialNode, calculateNormals=True)
-    if not lh_pialNode:
-        raise RuntimeError("Failed to load lh.pial model.")
-    print("Cortical model loaded:", lh_pialNode.GetName())
+    load_success_lh = read_fs_surf(lh_pial_path, lh_pialNode, calculateNormals=True)
+    if not load_success_lh:
+        if create_env_mode:
+            raise RuntimeError("Failed to load lh.pial model.")
+    else:
+        print("Cortical model loaded:", lh_pialNode.GetName())
 
     print("Loading R pial surface (FreeSurfer curve):", rh_pial_path)
     rh_pialNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLModelNode", "rh_pial")
-    _ = read_fs_surf(rh_pial_path, rh_pialNode, calculateNormals=True)
-    if not rh_pialNode:
-        raise RuntimeError("Failed to load rh.pial model.")
-    print("Cortical model loaded:", rh_pialNode.GetName())
+    load_success_rh = read_fs_surf(rh_pial_path, rh_pialNode, calculateNormals=True)
+    if not load_success_rh:
+        if create_env_mode:
+            raise RuntimeError("Failed to load rh.pial model.")
+    else:
+        print("Cortical model loaded:", rh_pialNode.GetName())
 
     # Envelope surfaces
     if os.path.exists(lh_envelope_path) and os.path.exists(rh_envelope_path) and os.path.exists(brain_envelope_path):
@@ -128,7 +132,8 @@ def load_inputs(t1_path, ribbon_path, lh_pial_path, rh_pial_path, lh_envelope_pa
             print("Error creating envelope surfaces:", e)
             if create_env_mode:
                 print("In envelope creation mode, exiting Slicer.")
-                slicer.app.quit()
+                slicer.app.processEvents()
+                sys.exit(1)
 
     # If in create envelope mode, skip loading photo and return here
     if create_env_mode:
@@ -249,13 +254,21 @@ def main(t1_path, ribbon_path, lh_pial_path, rh_pial_path, lh_envelope_path, rh_
     """Main execution function."""
 
     # On startup, set layout to 3D view only and open Models module and Python console
-    slicer.app.layoutManager().setLayout(slicer.vtkMRMLLayoutNode.SlicerLayoutOneUp3DView)
-    slicer.util.selectModule('Models')
-    # TODO: Open python interactor
+    if not create_envelope_mode:
+        slicer.app.layoutManager().setLayout(slicer.vtkMRMLLayoutNode.SlicerLayoutOneUp3DView)
+        slicer.util.selectModule('Models')
+        # TODO: Open python interactor
 
     # Load all inputs
-    t1Node, ribbonNode, lh_pialNode, rh_pialNode, lh_envelopeNode, rh_envelopeNode, brain_envelopeNode, photoVolumeNode = \
-        load_inputs(t1_path, ribbon_path, lh_pial_path, rh_pial_path, lh_envelope_path, rh_envelope_path, brain_envelope_path, photo_path, create_envelope_mode)
+    try:
+        t1Node, ribbonNode, lh_pialNode, rh_pialNode, lh_envelopeNode, rh_envelopeNode, brain_envelopeNode, photoVolumeNode = \
+            load_inputs(t1_path, ribbon_path, lh_pial_path, rh_pial_path, lh_envelope_path, rh_envelope_path, brain_envelope_path, photo_path, create_envelope_mode)
+    except Exception as e:
+        print("Error loading inputs:", e)
+        if create_envelope_mode:
+            slicer.app.processEvents()
+            sys.exit(1)
+        return
 
     Nodes = {
         "t1Node": t1Node,
@@ -271,8 +284,8 @@ def main(t1_path, ribbon_path, lh_pial_path, rh_pial_path, lh_envelope_path, rh_
     # If in envelope creation mode, stop here (after loading and creating envelopes)
     if create_envelope_mode:
         print("Envelope creation mode: envelopes created/loaded. Stopping")
-        slicer.app.quit()
-        return
+        slicer.app.processEvents()
+        sys.exit(0)
 
     # Load photo masks into photo volume
     if mask_path and os.path.exists(mask_path):

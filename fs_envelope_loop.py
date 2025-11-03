@@ -25,7 +25,7 @@ def slicer_loop(root_dir, slicer_executable):
     )
 
     # Loop
-    for patient_dir in tqdm(patient_dirs, desc="Processing patients:", unit="pt"):
+    for patient_dir in tqdm(patient_dirs, desc="Processing patients", unit="pt"):
         # Get paths
         patient_id = os.path.split(os.path.basename(patient_dir))[-1]
         t1 = os.path.join(patient_dir, "mri", "T1.nii")
@@ -38,13 +38,15 @@ def slicer_loop(root_dir, slicer_executable):
         if not os.path.exists(lh_envelope) or not os.path.exists(rh_envelope) or not os.path.exists(brain_envelope):
             # Open Slicer and wait
             tqdm.write(f"Processing {patient_dir} in 3D Slicer...")
-            subprocess.run([
+            result = subprocess.run([
                 slicer_executable, "--no-main-window",
                 "--python-script", os.path.join(os.path.dirname(__file__), "slicer_script.py"),
                 "--t1_path", t1, "--lh_pial_path", lh_pial, "--rh_pial_path", rh_pial,
                 "--lh_envelope_path", lh_envelope, "--rh_envelope_path", rh_envelope,
                 "--brain_envelope_path", brain_envelope, "--create_envelope_mode"
-            ])
+            ], capture_output=True, text=True)
+            if result.returncode != 0:
+                tqdm.write(f"Error processing {patient_dir}: {result.stderr}")
         else:
             tqdm.write(f"Envelopes already exist for {patient_id}, skipping.")
 
