@@ -25,8 +25,8 @@ def load_config(config_path=os.path.join(os.path.dirname(__file__), "config.yaml
         with open(config_path, "w") as f:
             yaml.dump({
             "slicer_exe_path": "C:\\Path\\To\\Slicer.exe",
-            "mri_data_dir": "C:\\Path\\To\\Data\\Root\\Directory",
-            "pic_data_dir": "C:\\Path\\To\\Photograph\\Root\\Directory"
+            "mri_data_dir": "C:\\Path\\To\\MRI\\Data\\Directory",
+            "pic_data_dir": "C:\\Path\\To\\Photograph\\Data\\Directory"
             }, f)
         exit(0)  # Exit so user can edit paths
     
