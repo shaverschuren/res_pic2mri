@@ -119,6 +119,7 @@ def load_inputs(t1_path, ribbon_path, lh_pial_path, rh_pial_path, lh_envelope_pa
         brain_envelopeNode = util.load_stl_surface(brain_envelope_path, "brain_envelope")
     else:
         print("Envelope surfaces not found. Creating from pial surfaces (this may take a minute)...")
+        slicer.app.processEvents()
         # Create envelope models from pial surfaces
         lh_envelopeNode, rh_envelopeNode, brain_envelopeNode = util.create_envelopes(
             lh_pialNode, rh_pialNode, surf_dir=os.path.dirname(lh_envelope_path))
