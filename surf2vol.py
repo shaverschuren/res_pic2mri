@@ -4,9 +4,9 @@ import vtk
 from vtkmodules.util import numpy_support
 from scipy.ndimage import binary_closing
 
-def project_surface_to_volume_mask(surfaceNode, ribbonVolumeNode, depth_mm=20.0, target_rgb=(1,128,1),
+def project_surface_to_volume_mask(surfaceNode, ribbonVolumeNode, max_depth_mm=20.0, target_rgb=(1,128,1),
                                      gm_labels=[3, 42], scalar_name="ProjectedPhoto", samples=None,
-                                     morph_closing=True, se_size=3, visualize=True):
+                                     morph_closing=True, closing_radius_mm=3., visualize=True):
     """
     Projects a color-coded surface mask (RGB) into a grey matter volume
     strictly along the surface normals, using specified GM labels.
@@ -17,7 +17,7 @@ def project_surface_to_volume_mask(surfaceNode, ribbonVolumeNode, depth_mm=20.0,
         Surface containing RGB scalars.
     ribbonVolumeNode : vtkMRMLLabelMapVolumeNode
         Volume containing grey matter labels (e.g., ribbon.mgz).
-    depth_mm : float
+    max_depth_mm : float
         Maximum distance along normals to project.
     target_rgb : tuple
         RGB color of surface mask to select.
@@ -26,19 +26,19 @@ def project_surface_to_volume_mask(surfaceNode, ribbonVolumeNode, depth_mm=20.0,
     scalar_name : str
         Name of the scalar array on the surface.
     samples : int | None
-        Number of samples along each normal. If None, defaults to 2 * depth_mm.
+        Number of samples along each normal. If None, defaults to 2 * max_depth_mm.
     morph_closing : bool
         Whether to apply morphological closing to the resulting mask.
-    se_size : int
-        Size of the structuring element for morphological closing.
+    closing_radius_mm : float
+        Size of the structuring element for morphological closing in mm.
     visualize : bool
         Whether to visualize the resulting mask in Slicer.
     """
 
     if samples is None:
-        samples = int(depth_mm * 2)  # 0.5 mm steps
+        samples = int(max_depth_mm * 2)  # 0.5 mm steps
 
-    print(f"Projecting surface mask along normals into grey matter volume up to {depth_mm} mm depth...")
+    print(f"Projecting surface mask along normals into grey matter volume up to {max_depth_mm} mm depth...")
 
     print("--> Masking surface data...")
     # --- Extract RGB scalar array ---
@@ -76,7 +76,7 @@ def project_surface_to_volume_mask(surfaceNode, ribbonVolumeNode, depth_mm=20.0,
     print("--> Projecting along normals...")
     # --- Sample along normals ---
     for pt, nrm in zip(points, normals):
-        for t in np.linspace(0, depth_mm, samples):
+        for t in np.linspace(0, max_depth_mm, samples):
             sample_ras = pt + t * nrm  # inward along normal
             ras_h = np.array([*sample_ras, 1.0])
             ijk_h = ras2ijk.MultiplyPoint(ras_h)
@@ -91,10 +91,34 @@ def project_surface_to_volume_mask(surfaceNode, ribbonVolumeNode, depth_mm=20.0,
     # --- Optional morphological closing ---
     if morph_closing:
         print("--> Applying morphological closing to mask...")
-        mask_array = binary_closing(mask_array, structure=np.ones((se_size, se_size, se_size))).astype(np.uint8)
+        slicer.app.processEvents() 
+
+        # Get voxel spacing
+        spacing = ribbonVolumeNode.GetSpacing()
+        # Compute kernel half-size (radius) in voxels for each axis
+        se_radii_vox = [
+            max(1, int(np.ceil(closing_radius_mm / s)))
+            for s in spacing
+        ]
+        # Create a grid for the 3D ellipsoidal structuring element
+        grid = np.ogrid[
+            -se_radii_vox[0]:se_radii_vox[0] + 1,
+            -se_radii_vox[1]:se_radii_vox[1] + 1,
+            -se_radii_vox[2]:se_radii_vox[2] + 1,
+        ]
+        # Equation of an ellipsoid scaled by voxel spacing
+        ellipsoid = (
+            (grid[0] * spacing[0]) ** 2 +
+            (grid[1] * spacing[1]) ** 2 +
+            (grid[2] * spacing[2]) ** 2
+        ) <= closing_radius_mm ** 2
+        se = ellipsoid.astype(np.uint8)
+
+        # Perform binary closing
+        mask_array = binary_closing(mask_array, structure=se).astype(np.uint8)
 
     # --- Create output labelmap ---
-    labelNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLLabelMapVolumeNode", f"projectedMask_{depth_mm}mm")
+    labelNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLLabelMapVolumeNode", f"projectedMask_{max_depth_mm}mm")
     slicer.util.updateVolumeFromArray(labelNode, mask_array)
     labelNode.CopyOrientation(ribbonVolumeNode)
 
@@ -117,7 +141,9 @@ def project_surface_to_volume_mask(surfaceNode, ribbonVolumeNode, depth_mm=20.0,
     # Remove intermediate labelmap
     slicer.mrmlScene.RemoveNode(labelNode)
 
-    print(f"DONE. Projected surface RGB mask {target_rgb} along normals into grey matter up to {depth_mm} mm.")
+    print(f"DONE. Projected surface RGB mask {target_rgb} along normals into grey matter up to {max_depth_mm} mm.")
+    print(f"Segmentation node created: {segmentationNode.GetName()}")
+    print("You can access and tweak it via the Segmentations module or via `slicer.util.getNode()`.")
     return segmentationNode
 
 def save_resection_mask(segmentationNode, output_path):
