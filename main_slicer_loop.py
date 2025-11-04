@@ -67,6 +67,7 @@ def main_slicer_loop(mri_data_dir, pic_data_dir, slicer_executable, patient_dir_
         mask_path = os.path.join(output_dir, f"{patient_id}_photo_masks.npz")
         figure_path = os.path.join(output_dir, f"{patient_id}_photo_with_masks.png")
         resection_mask_path = os.path.join(output_dir, f"pic2mri_resection_mask.nii.gz")
+        atlas_based_flag_path = os.path.join(output_dir, "atlas_based.txt")
 
         # Pass if missing photo directory
         if not os.path.exists(os.path.join(pic_data_dir, patient_id)):
@@ -76,6 +77,11 @@ def main_slicer_loop(mri_data_dir, pic_data_dir, slicer_executable, patient_dir_
         # Pass if resection mask already exists
         if os.path.exists(resection_mask_path) and not reprocess:
             tqdm.write(f"Resection mask already exists for {patient_id}, skipping patient.")
+            continue
+    
+        # Pass if atlas-based flag exists
+        if os.path.exists(atlas_based_flag_path) and not reprocess:
+            tqdm.write(f"Atlas-based resection mask flagged for {patient_id}, skipping patient.")
             continue
 
         # Create output dir if needed

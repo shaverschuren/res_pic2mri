@@ -408,6 +408,13 @@ def setup_interactor(Nodes, plane_dims, photo_mask_path, MainProjection, transfo
 
             else:
                 print("No segmentationNode found to save.")
+        # Exit program and label as atlas-based mask with "x" key
+        elif key == "x":
+            # Label subject as atlas-based to come back to later (for lobectomies etc.)
+            with open(os.path.join(output_dir, "atlas_based.txt"), "w") as f:
+                f.write("This subject uses an atlas-based resection mask.\n")
+            # Quit app
+            app.quit()
         # Exit program with "q" key
         elif key == "q":
             # Check whether to save before quitting
