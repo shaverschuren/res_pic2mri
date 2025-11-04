@@ -198,7 +198,19 @@ class PhotoTransformObserver:
             self._observerTag = None
 
 def setup_interactive_transform(transformNode, visibility=True, limit_to_surf_aligned=True):
-    """Setup transform node for interactive manipulation of transform node"""
+    """
+    Set up transform node for interactive manipulation with handle controls.
+    
+    Parameters
+    ----------
+    transformNode : vtkMRMLLinearTransformNode
+        Transform node to make interactive
+    visibility : bool, optional
+        Whether to show interactive handles. Defaults to True
+    limit_to_surf_aligned : bool, optional
+        If True, limits rotation to Z-axis only and translation to XY plane.
+        If False, allows full 3D rotation and translation. Defaults to True
+    """
 
     # Ensure transform node has a display node
     if not transformNode.GetDisplayNode():
@@ -235,8 +247,31 @@ def setup_interactive_transform(transformNode, visibility=True, limit_to_surf_al
 def setup_ui_widgets(MainProjection, transformObserver, transformNode,
                      min_mm=1.0, max_mm=300.0, initial_mm=150.0):
     """
-    Create a 'Projector Control' dock widget safely attached to the main window.
-    Contains camera distance slider + snap toggle, and survives layout changes.
+    Create a 'Projector Control' dock widget for controlling projection settings.
+    
+    Creates a docked panel with camera distance slider and snap-to-surface toggle.
+    The widget is safely attached to the main window and survives layout changes.
+    
+    Parameters
+    ----------
+    MainProjection : Projection
+        The projection object to control
+    transformObserver : PhotoTransformObserver
+        The transform observer that handles dragging constraints
+    transformNode : vtkMRMLLinearTransformNode
+        The transform node being controlled
+    min_mm : float, optional
+        Minimum camera distance in mm. Defaults to 1.0
+    max_mm : float, optional
+        Maximum camera distance in mm. Defaults to 300.0
+    initial_mm : float, optional
+        Initial camera distance in mm. Defaults to 150.0
+    
+    Returns
+    -------
+    tuple
+        (slider, toggle, dockWidget) - The camera distance slider, snap toggle checkbox, 
+        and the dock widget container
     """
 
     mainWindow = slicer.util.mainWindow()
@@ -315,12 +350,37 @@ def setup_ui_widgets(MainProjection, transformObserver, transformNode,
     return slider, toggle, dockWidget
 
 def setup_interactor(Nodes, plane_dims, photo_mask_path, MainProjection, transformObserver, output_dir):
-    """Install keypress handlers on all 3D and slice view interactors.
+    """
+    Install keypress handlers on all 3D and slice view interactors.
 
-    This prepares the application to respond to keyboard shortcuts (1,2, space, Return,
-    d, s, q) that control layout, camera centering, projection alignment, curve drawing,
-    saving, and quitting. Expects `Nodes` to contain at least "transformNode" and
-    "brain_envelopeNode".
+    This prepares the application to respond to keyboard shortcuts that control
+    layout, camera centering, projection alignment, curve drawing, saving, and quitting.
+    
+    Keyboard shortcuts:
+    - '1': Switch to 3D view only
+    - '2': Switch to red slice view only
+    - 'space': Center camera on projection plane
+    - 'Return': Align projection plane to current camera view
+    - 'a': Auto-align projection plane (experimental)
+    - 'v': Create volumetric resection mask from aligned surfaces
+    - 's': Save scene and resection mask
+    - 'q': Quit Slicer
+    
+    Parameters
+    ----------
+    Nodes : dict
+        Dictionary containing Slicer nodes (must include 'transformNode', 
+        'brain_envelopeNode', and other scene nodes)
+    plane_dims : tuple
+        (width, height) dimensions of the photo plane in mm
+    photo_mask_path : str
+        Path to the .npz file containing photo masks
+    MainProjection : Projection
+        The projection object handling photo projection
+    transformObserver : PhotoTransformObserver
+        The transform observer managing dragging constraints
+    output_dir : str
+        Directory for saving output files
     """
 
     # Get app

@@ -1,17 +1,24 @@
 # slicer_script.py
-# Author: Sjors
-# Date: 14-10-2025
+# Author: Sjors Verschuren
+# Date: October 2025
 
 """
-Description: This script is intended to be run inside `3D Slicer` via the --python-script argument.
-It automates the loading and setup for manual registration of an intraoperative photograph to MRI.
+Slicer automation script for photo-to-MRI registration.
+
+This script is intended to be run inside 3D Slicer via the --python-script argument.
+It automates the loading and setup for manual registration of an intraoperative 
+photograph to MRI.
+
 Developed and tested with 3D Slicer 5.8.1 and SlicerFreeSurfer 05eccb9.
 
-- Loads: T1 volume, FreeSurfer pial surfaces, envelope surfaces (or creates them), intraoperative photograph
+Features:
+- Loads T1 volume, FreeSurfer pial surfaces, envelope surfaces (or creates them), 
+  and intraoperative photograph
 - Creates a textured plane with the photograph
-- Adds a linear transform so to interactively align the photo
-- Creates a markups curve and starts place mode for manual annotation
-- Exports curve control points (RAS coordinates) to CSV (when you call export function)
+- Adds a linear transform for interactive photo alignment
+- Provides keyboard shortcuts for common operations
+- Supports projection of aligned photo onto cortical surface
+- Exports volumetric resection masks
 """
 
 import os
@@ -25,7 +32,23 @@ import util
 from NiBabelModelIO import VolGeom  # type: ignore
 
 def read_fs_surf(path, modelNode, calculateNormals=True):
-    """Read a FreeSurfer surface file and set it to the provided model node."""
+    """
+    Read a FreeSurfer surface file and set it to the provided model node.
+    
+    Parameters
+    ----------
+    path : str
+        Path to the FreeSurfer surface file (e.g., lh.pial, rh.pial)
+    modelNode : vtkMRMLModelNode
+        Slicer model node to store the loaded surface
+    calculateNormals : bool, optional
+        Whether to compute point normals for the surface. Defaults to True
+    
+    Returns
+    -------
+    bool
+        True if loading succeeded, False otherwise
+    """
 
     try:
         points, polys, metadata = nib.freesurfer.io.read_geometry(path, True)
@@ -94,7 +117,43 @@ def read_fs_surf(path, modelNode, calculateNormals=True):
     return True
 
 def load_inputs(t1_path, ribbon_path, lh_pial_path, rh_pial_path, lh_envelope_path, rh_envelope_path, brain_envelope_path, photo_path, create_env_mode=False):
-    """Load all input data: T1 volume, cortical surface, envelope model, photograph as volume."""
+    """
+    Load all input data: T1 volume, cortical surfaces, envelope models, and photograph.
+    
+    Parameters
+    ----------
+    t1_path : str
+        Path to T1 MRI volume
+    ribbon_path : str
+        Path to FreeSurfer ribbon (gray matter mask) volume
+    lh_pial_path : str
+        Path to left hemisphere pial surface
+    rh_pial_path : str
+        Path to right hemisphere pial surface
+    lh_envelope_path : str
+        Path to left hemisphere envelope STL file
+    rh_envelope_path : str
+        Path to right hemisphere envelope STL file
+    brain_envelope_path : str
+        Path to whole brain envelope STL file
+    photo_path : str
+        Path to intraoperative photograph
+    create_env_mode : bool, optional
+        If True, only creates envelopes and exits. Defaults to False
+    
+    Returns
+    -------
+    tuple
+        (t1Node, ribbonNode, lh_pialNode, rh_pialNode, lh_envelopeNode, 
+         rh_envelopeNode, brain_envelopeNode, photoVolumeNode)
+        Returns (None, None, None, None, lh_envelopeNode, rh_envelopeNode, 
+         brain_envelopeNode, None) if create_env_mode is True
+    
+    Raises
+    ------
+    RuntimeError
+        If required files fail to load
+    """
 
     # Pial surfaces
     print("Loading L pial surface (FreeSurfer curve):", lh_pial_path)
@@ -192,8 +251,28 @@ def load_inputs(t1_path, ribbon_path, lh_pial_path, rh_pial_path, lh_envelope_pa
 
     return t1Node, ribbonNode, lh_pialNode, rh_pialNode, lh_envelopeNode, rh_envelopeNode, brain_envelopeNode, photoVolumeNode
 
-# Create a plane model which will receive the texture
 def create_textured_plane(photoVolumeNode, planeName="PhotoPlane", width=120.0, height=120.0, opacity=0.6):
+    """
+    Create a plane model which will receive the photograph as a texture.
+    
+    Parameters
+    ----------
+    photoVolumeNode : vtkMRMLScalarVolumeNode
+        Volume node containing the photograph data
+    planeName : str, optional
+        Name for the created plane model. Defaults to "PhotoPlane"
+    width : float, optional
+        Width of the plane in mm. Defaults to 120.0
+    height : float, optional
+        Height of the plane in mm. Defaults to 120.0
+    opacity : float, optional
+        Opacity of the textured plane (0.0 to 1.0). Defaults to 0.6
+    
+    Returns
+    -------
+    tuple
+        (planeNode, flip) - The model node containing the plane and the VTK flip filter
+    """
     # Create vtkPlaneSource
     plane = vtk.vtkPlaneSource()
     plane.SetOrigin(-width/2.0, -height/2.0, 0.0)
@@ -232,10 +311,25 @@ def create_textured_plane(photoVolumeNode, planeName="PhotoPlane", width=120.0, 
 
 def setup_interactive_photo_plane(planeNode, envelopeNode, offset_mm=5.0):
     """
-    - Places plane on envelope surface + offset
-    - Attaches transform
-    - Enables immediate interactive handles
-    - Constrains dragging to envelope surface + in-plane rotation + uniform scale
+    Set up interactive transform controls for the photo plane.
+    
+    Places plane on envelope surface with offset, attaches transform,
+    enables immediate interactive handles, and constrains dragging to 
+    envelope surface with in-plane rotation and uniform scale.
+    
+    Parameters
+    ----------
+    planeNode : vtkMRMLModelNode
+        The plane model node to make interactive
+    envelopeNode : vtkMRMLModelNode
+        The envelope surface model node that constrains plane position
+    offset_mm : float, optional
+        Offset distance from envelope surface in mm. Defaults to 5.0
+    
+    Returns
+    -------
+    tuple
+        (transformObserver, transformNode) - Observer managing constraints and the transform node
     """
     # Create linear transform and attach
     transformNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLLinearTransformNode", "PhotoTransform")
@@ -251,7 +345,38 @@ def setup_interactive_photo_plane(planeNode, envelopeNode, offset_mm=5.0):
     return transformObserver, transformNode
 
 def main(t1_path, ribbon_path, lh_pial_path, rh_pial_path, lh_envelope_path, rh_envelope_path, brain_envelope_path, photo_path, mask_path, output_dir, create_envelope_mode=False):
-    """Main execution function."""
+    """
+    Main execution function for photo-to-MRI registration in 3D Slicer.
+    
+    Sets up the Slicer scene with all necessary data, creates interactive
+    transform controls for manual photo alignment, and provides keyboard
+    shortcuts for common operations.
+    
+    Parameters
+    ----------
+    t1_path : str
+        Path to T1 MRI volume
+    ribbon_path : str
+        Path to FreeSurfer ribbon (gray matter mask) volume
+    lh_pial_path : str
+        Path to left hemisphere pial surface
+    rh_pial_path : str
+        Path to right hemisphere pial surface
+    lh_envelope_path : str
+        Path to left hemisphere envelope STL file
+    rh_envelope_path : str
+        Path to right hemisphere envelope STL file
+    brain_envelope_path : str
+        Path to whole brain envelope STL file
+    photo_path : str
+        Path to intraoperative photograph
+    mask_path : str
+        Path to .npz file containing photo masks
+    output_dir : str
+        Directory for saving output files
+    create_envelope_mode : bool, optional
+        If True, only creates envelopes and exits. Defaults to False
+    """
 
     # On startup, set layout to 3D view only and open Models module and Python console
     if not create_envelope_mode:

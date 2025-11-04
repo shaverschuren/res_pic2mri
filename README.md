@@ -185,8 +185,13 @@ res_pic2mri/
 ├── slicer_script.py           # Slicer automation script (runs inside Slicer)
 ├── process_photograph.py      # Photo preprocessing and file handling
 ├── surf2vol.py                # Surface-to-volume projection utilities
-├── util.py                    # General utility functions
 ├── optimizer.py               # Auto-alignment optimization (experimental)
+├── util/                      # Utility package with specialized modules
+│   ├── __init__.py            # Package exports and documentation
+│   ├── io.py                  # Scene and file I/O operations
+│   ├── geometry.py            # Geometry and matrix utilities
+│   ├── projection.py          # Photo projection onto surfaces
+│   └── interaction.py         # UI, camera, and interaction handling
 ├── MATLAB/
 │   └── create_envelopes.m     # MATLAB script for envelope creation
 └── .gitignore                 # Git ignore rules
@@ -199,7 +204,11 @@ res_pic2mri/
 - **slicer_script.py**: Executed inside Slicer's Python environment to set up the registration scene
 - **process_photograph.py**: Handles photograph file discovery, copying, and preprocessing
 - **surf2vol.py**: Converts FreeSurfer surface masks to volumetric representations
-- **util.py**: Common utilities for surface I/O, geometry transformations, and data handling
+- **util/**: Utility package containing specialized modules:
+  - **io.py**: Scene and file I/O operations, STL handling, envelope creation
+  - **geometry.py**: Matrix conversions, rotation utilities, VTK polydata operations
+  - **projection.py**: Photo projection onto 3D surfaces with perspective/orthographic support
+  - **interaction.py**: UI widgets, camera controls, and interactive transform handling
 - **optimizer.py**: Experimental auto-alignment using image registration techniques
 - **create_envelopes.m**: MATLAB function to create brain surface envelopes from pial surfaces
 

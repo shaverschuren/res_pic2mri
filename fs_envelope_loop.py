@@ -6,11 +6,19 @@ from main_slicer_loop import load_config
 
 def slicer_loop(root_dir, slicer_executable):
     """
-    Opens each patient in 3D slicer for creating envelope STL files if they don't exist.
+    Open each patient in 3D Slicer for creating envelope STL files if they don't exist.
 
     This is a modified version of main_slicer_loop.py focusing on envelope creation only.
-    You can run this script first to create missing envelopes before running main_slicer_loop.py for photo to MRI registration.
-    Otherwise you'll have to wait for envelope creation for each patient in main_slicer_loop.py.
+    You can run this script first to create missing envelopes before running main_slicer_loop.py 
+    for photo to MRI registration. Otherwise you'll have to wait for envelope creation for each 
+    patient in main_slicer_loop.py.
+    
+    Parameters
+    ----------
+    root_dir : str
+        Root directory containing FreeSurfer patient subdirectories
+    slicer_executable : str
+        Path to the 3D Slicer executable
     """
 
     # Get patient dirs
@@ -52,8 +60,8 @@ def slicer_loop(root_dir, slicer_executable):
 
 if __name__ == "__main__":
     # Create or load config, set path variables
-    cfg = load_config()
-    slicer_exe_path = cfg["slicer_exe_path"]
-    mri_data_dir = cfg["mri_data_dir"]
+    config = load_config()
+    slicer_exe_path = config["slicer_exe_path"]
+    mri_data_dir = config["mri_data_dir"]
     # Run function
     slicer_loop(mri_data_dir, slicer_exe_path)

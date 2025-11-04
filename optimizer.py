@@ -14,7 +14,8 @@ except ImportError:
     import cv2
 import pprint
 
-import os, time  # TODO: Debugging
+import os
+import time
 try:
     import matplotlib.pyplot as plt
 except Exception:
@@ -23,13 +24,40 @@ except Exception:
 
 def plot_debug_images(proj_img, curv_img, mask, sdf_p, sdf_q, nmi_map,
                       debug_dir="L:/her_knf_golf/Wetenschap/newtransport/Sjors/data/tmp"):
-    """Plot debug images for visual inspection."""
+    """
+    Plot debug images for visual inspection of alignment optimization.
+    
+    Creates a diagnostic figure showing:
+    1. Projected photo (p)
+    2. Curvature map (q)  
+    3. Overlay (R=p, G=q)
+    4. SDF of p
+    5. SDF of q
+    6. NMI map
+    
+    Parameters
+    ----------
+    proj_img : np.ndarray
+        Projected photo soft mask image
+    curv_img : np.ndarray
+        Curvature soft mask image
+    mask : np.ndarray
+        Boolean mask indicating valid regions
+    sdf_p : np.ndarray
+        Signed distance field for projected photo
+    sdf_q : np.ndarray
+        Signed distance field for curvature
+    nmi_map : np.ndarray
+        Normalized mutual information map
+    debug_dir : str, optional
+        Directory to save debug images
+    """
     # Get images
-    p = proj_img
-    q = curv_img
+    photo_proc = proj_img
+    curv_proc = curv_img
 
     # Timestamp
-    ts = int(time.time() * 1000)
+    timestamp = int(time.time() * 1000)
 
     plt.figure()  # wide layout for 3 columns x 2 rows
 
@@ -38,45 +66,45 @@ def plot_debug_images(proj_img, curv_img, mask, sdf_p, sdf_q, nmi_map,
         sdf_p_img = np.asarray(-sdf_p, dtype=np.float32)
         sdf_q_img = np.asarray(sdf_q, dtype=np.float32)
 
-        if sdf_p_img.shape != p.shape:
-            _p = np.zeros_like(p, dtype=np.float32)
-            _q = np.zeros_like(q, dtype=np.float32)
+        if sdf_p_img.shape != photo_proc.shape:
+            temp_p = np.zeros_like(photo_proc, dtype=np.float32)
+            temp_q = np.zeros_like(curv_proc, dtype=np.float32)
             if mask is not None:
-                _p[mask] = sdf_p_img.ravel()
-                _q[mask] = sdf_q_img.ravel()
+                temp_p[mask] = sdf_p_img.ravel()
+                temp_q[mask] = sdf_q_img.ravel()
             else:
                 try:
-                    _p = sdf_p_img.reshape(p.shape)
-                    _q = sdf_q_img.reshape(q.shape)
+                    temp_p = sdf_p_img.reshape(photo_proc.shape)
+                    temp_q = sdf_q_img.reshape(curv_proc.shape)
                 except Exception:
                     pass
-            sdf_p_img = _p
-            sdf_q_img = _q
+            sdf_p_img = temp_p
+            sdf_q_img = temp_q
     except Exception:
-        sdf_p_img = np.zeros_like(p, dtype=np.float32)
-        sdf_q_img = np.zeros_like(q, dtype=np.float32)
+        sdf_p_img = np.zeros_like(photo_proc, dtype=np.float32)
+        sdf_q_img = np.zeros_like(curv_proc, dtype=np.float32)
 
     # compute difference
     sdf_diff_abs = np.abs(sdf_p_img - sdf_q_img)
     maxdiff = float(np.max(sdf_diff_abs))
     maxabs = max(float(np.max(np.abs(sdf_p_img))), float(np.max(np.abs(sdf_q_img))), 1e-9)
 
-    # Plot 1: p (projected photo soft mask)
+    # Plot 1: photo_proc (projected photo soft mask)
     ax1 = plt.subplot(2, 3, 1)
-    ax1.imshow(p, cmap='gray', interpolation='nearest')
+    ax1.imshow(photo_proc, cmap='gray', interpolation='nearest')
     ax1.set_title("1: Projected photo (p)")
     ax1.axis('off')
 
-    # Plot 2: q (curvature soft mask)
+    # Plot 2: curv_proc (curvature soft mask)
     ax2 = plt.subplot(2, 3, 2)
-    ax2.imshow(q, cmap='gray', interpolation='nearest')
+    ax2.imshow(curv_proc, cmap='gray', interpolation='nearest')
     ax2.set_title("2: Curvature (q)")
     ax2.axis('off')
 
-    # Plot 3: overlay p (red) + q (green)
+    # Plot 3: overlay photo_proc (red) + curv_proc (green)
     ax3 = plt.subplot(2, 3, 3)
-    p_float = np.clip(p.astype(np.float32), 0.0, 1.0)
-    q_float = np.clip(q.astype(np.float32), 0.0, 1.0)
+    p_float = np.clip(photo_proc.astype(np.float32), 0.0, 1.0)
+    q_float = np.clip(curv_proc.astype(np.float32), 0.0, 1.0)
     blue = np.minimum(p_float, q_float) * 0.5
     overlay_rgb = np.dstack([p_float, q_float, blue])
     ax3.imshow(overlay_rgb, interpolation='nearest')
@@ -104,7 +132,7 @@ def plot_debug_images(proj_img, curv_img, mask, sdf_p, sdf_q, nmi_map,
 
     plt.tight_layout()
 
-    file_path = os.path.join(debug_dir, f"autoAlign_debug_img_{ts}.png")
+    file_path = os.path.join(debug_dir, f"autoAlign_debug_img_{timestamp}.png")
     plt.savefig(file_path, bbox_inches='tight')
     plt.close()
 
@@ -116,7 +144,24 @@ def preprocess_photo(
 ):
     """
     Enhance sulci and large vessels in cortical intraoperative photographs.
+    
     Ignores masked regions (value == 0.0).
+    
+    Parameters
+    ----------
+    img : np.ndarray
+        Input photograph image (grayscale or RGB converted to grayscale)
+    denoise_strength : int, optional
+        Bilateral filter diameter for denoising. Use 0 to disable. Defaults to 5
+    clip_limit : float, optional
+        CLAHE clip limit for local contrast enhancement. Defaults to 2.0
+    tile_grid : tuple, optional
+        CLAHE tile grid size. Defaults to (8, 8)
+    
+    Returns
+    -------
+    tuple
+        (enhanced_smoothed, valid_mask) - Enhanced image and boolean mask of valid regions
     """
 
     # ---- Step 0. Extract mask ----
@@ -196,7 +241,21 @@ def preprocess_photo(
 def preprocess_curvature(curv, sigma_blur=1.0):
     """
     Preprocess curvature map to match photo appearance.
-    Returns float32 image normalized to zero mean, unit variance.
+    
+    Applies thresholding, morphological operations, and blurring to highlight
+    gyri and sulci patterns.
+    
+    Parameters
+    ----------
+    curv : np.ndarray
+        Input curvature map from cortical surface
+    sigma_blur : float, optional
+        Gaussian blur sigma for smoothing. Defaults to 1.0
+    
+    Returns
+    -------
+    np.ndarray
+        Float32 image with sulci bright, normalized to [0, 1]
     """
 
     # Threshold to get gyrus/sulcus mask
@@ -222,9 +281,26 @@ def preprocess_curvature(curv, sigma_blur=1.0):
 
 def sdf_similarity(photo_mask, curv_mask, mask=None):
     """
-    Compute smooth similarity between two binary gyral masks
-    using the mean squared difference of signed distance maps.
-    Higher return value = more similar.
+    Compute smooth similarity between two binary gyral masks.
+    
+    Uses the mean squared difference of signed distance maps to measure
+    shape similarity between photo and curvature masks.
+    
+    Parameters
+    ----------
+    photo_mask : np.ndarray
+        Binary mask from projected photo
+    curv_mask : np.ndarray
+        Binary mask from curvature map
+    mask : np.ndarray, optional
+        Optional restriction mask for the comparison
+    
+    Returns
+    -------
+    tuple
+        (similarity, sdf_p, sdf_q) - Similarity score (higher = more similar),
+        normalized signed distance field of photo mask, 
+        normalized signed distance field of curvature mask
     """
 
     # Ensure binary float arrays
@@ -416,6 +492,21 @@ def make_curv_actor_from_model(modelNode, scalarName="curv"):
     return actor, mapper
 
 def make_scalar_actor_from_model(modelNode, scalarName="PhotoProjection"):
+    """
+    Create a VTK actor for rendering scalar data on a model as grayscale.
+    
+    Parameters
+    ----------
+    modelNode : vtkMRMLModelNode
+        Model node containing the scalar array
+    scalarName : str, optional
+        Name of the scalar array to visualize. Defaults to "PhotoProjection"
+    
+    Returns
+    -------
+    tuple
+        (actor, mapper) - VTK actor and mapper for the scalar visualization
+    """
 
     # Create an actor for the envelope model
     actor = vtk.vtkActor()
@@ -469,8 +560,65 @@ def auto_align_photo_to_brain(
     ren_camera_distance_mm=10.0
 ):
     """
-    Two-stage alignment routine: coarse-to-fine optimization that reuses renderer and actor
-    objects between stages and applies the final transform to the scene only once at the end.
+    Two-stage automatic alignment of photo to brain surface.
+    
+    This is an EXPERIMENTAL feature that performs coarse-to-fine optimization
+    to align a projected photograph with cortical curvature patterns. The alignment
+    uses normalized mutual information (NMI) and signed distance field (SDF) 
+    similarity metrics.
+    
+    WARNING: This feature is not yet stable and requires additional development
+    before production use.
+    
+    Parameters
+    ----------
+    photoVolumeNode : vtkMRMLScalarVolumeNode
+        Volume node containing the photograph
+    transformNode : vtkMRMLLinearTransformNode
+        Transform node to optimize
+    pialModelNode : vtkMRMLModelNode
+        Pial surface model with curvature scalars
+    envelopeModelNode : vtkMRMLModelNode
+        Brain envelope model for projection
+    plane_dims : tuple
+        (width, height) dimensions of photo plane in mm
+    mask_path : str
+        Path to .npz file containing photo masks
+    MainProjection : Projection
+        Main projection object to update
+    scalarName : str, optional
+        Name of curvature scalar on pial surface. Defaults to "curv"
+    coarse_search_tu_mm : float, optional
+        Coarse search range in U direction (mm). Defaults to 2.5
+    coarse_search_tv_mm : float, optional
+        Coarse search range in V direction (mm). Defaults to 2.5
+    coarse_search_rotation_deg : float, optional
+        Coarse search range for rotation (degrees). Defaults to 5.0
+    coarse_search_cam_dist_ratio : float, optional
+        Coarse search range for camera distance ratio. Defaults to 0.5
+    coarse_search_scale : float, optional
+        Coarse search range for scale. Defaults to 0.20
+    coarse_search_n_steps : int, optional
+        Number of steps per dimension in coarse grid. Defaults to 5
+    fine_search_tu_mm : float, optional
+        Fine search range in U direction (mm). Defaults to 1.0
+    fine_search_tv_mm : float, optional
+        Fine search range in V direction (mm). Defaults to 1.0
+    fine_search_rotation_deg : float, optional
+        Fine search range for rotation (degrees). Defaults to 1.5
+    fine_search_cam_dist_ratio : float, optional
+        Fine search range for camera distance ratio. Defaults to 0.25
+    fine_search_scale : float, optional
+        Fine search range for scale. Defaults to 0.1
+    photo_sample_size : tuple, optional
+        (width, height) size for rendering comparisons. Defaults to (128, 128)
+    ren_camera_distance_mm : float, optional
+        Rendering camera distance in mm. Defaults to 10.0
+    
+    Returns
+    -------
+    None or dict
+        None if optimization cancelled or failed, otherwise optimization result dict
     """
     # Get base transform matrix
     vtkMat_base = vtk.vtkMatrix4x4()
