@@ -12,6 +12,19 @@ import tkinter as tk
 from tkinter import filedialog
 
 def open_image_viewer(path):
+    """
+    Open an image file in the system's default image viewer.
+    
+    Parameters
+    ----------
+    path : str
+        Path to the image file to open
+    
+    Returns
+    -------
+    subprocess.Popen
+        Process handle for the opened viewer (platform-dependent)
+    """
     system = platform.system()
 
     if system == "Windows":
@@ -27,6 +40,14 @@ def open_image_viewer(path):
         return subprocess.Popen(["eog", path])
 
 def close_image_viewer(process):
+    """
+    Close an image viewer process opened with open_image_viewer.
+    
+    Parameters
+    ----------
+    process : subprocess.Popen
+        Process handle returned by open_image_viewer
+    """
     system = platform.system()
 
     if system == "Windows":
@@ -39,7 +60,26 @@ def close_image_viewer(process):
         process.terminate()  # Close eog
 
 def find_pic_path(patient_id, picture_root, copy_dir=None, tqdm_handle=None):
-    """Find the path to the intraoperative photograph for a given patient ID. If copy_dir is provided, copy the file there."""
+    """
+    Find the path to the intraoperative photograph for a given patient ID.
+    
+    Parameters
+    ----------
+    patient_id : str
+        Patient identifier (e.g., 'RESP001')
+    picture_root : str
+        Root directory containing patient photograph subdirectories
+    copy_dir : str, optional
+        If provided, copy the found photograph to this directory
+    tqdm_handle : tqdm, optional
+        tqdm progress bar handle for logging output
+    
+    Returns
+    -------
+    str or None
+        Path to the photograph file (or copied file if copy_dir specified), 
+        or None if no photograph found or user cancelled selection
+    """
 
     # Define logging function
     log = tqdm_handle.write if tqdm_handle else print
@@ -106,7 +146,28 @@ def find_pic_path(patient_id, picture_root, copy_dir=None, tqdm_handle=None):
 def draw_photo_masks(photo_path, save_path=None, tqdm_handle=None):
     """
     Draw two masks (resection & outside) on the photograph and save to .npz.
+    
+    This function opens an interactive matplotlib window where the user can draw
+    two polygon masks on the photograph:
+    1. Resection area (area to be analyzed)
+    2. Outside area (area to be excluded from analysis)
+    
     Double-click closes the polygon. Press ENTER to confirm each selection.
+    
+    Parameters
+    ----------
+    photo_path : str
+        Path to the photograph file (e.g., .jpg, .png)
+    save_path : str, optional
+        Path where the masks will be saved as .npz file. If None, saves to
+        '{photo_path}_masks.npz'
+    tqdm_handle : tqdm, optional
+        tqdm progress bar handle for logging output
+    
+    Returns
+    -------
+    bool
+        True if masks were successfully drawn and saved, False otherwise
     """
 
     # Define logging function

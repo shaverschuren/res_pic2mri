@@ -203,11 +203,21 @@ def load_photo_masks(mask_path, photoVolumeNode,
                      scalar_value_resection=(1, 128, 1),
                      scalar_value_outside=(0, 0, 0)):
     """
-    Apply user-drawn resection and outside masks to a photo texture volume (RGB or grayscale).
+    Apply user-drawn resection and outside masks to a photo texture volume.
 
-    - `mask_path`: path to .npz file with 'resection_mask' and 'outside_mask'
-    - `photoVolumeNode`: Slicer volume node (e.g., JPG/PNG loaded)
-    - Replaces pixel values in masked areas with given RGB or scalar values.
+    Replaces pixel values in masked areas with specified RGB or scalar values.
+    This is used to highlight or hide specific regions in the photograph.
+    
+    Parameters
+    ----------
+    mask_path : str
+        Path to .npz file containing 'resection_mask' and 'outside_mask' boolean arrays
+    photoVolumeNode : vtkMRMLScalarVolumeNode
+        Slicer volume node containing the photograph (RGB or grayscale)
+    scalar_value_resection : tuple or scalar, optional
+        RGB values or scalar to use for resection mask pixels. Defaults to (1, 128, 1)
+    scalar_value_outside : tuple or scalar, optional
+        RGB values or scalar to use for outside mask pixels. Defaults to (0, 0, 0)
     """
 
     if not os.path.exists(mask_path):

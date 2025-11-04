@@ -8,14 +8,30 @@ To use, make sure to set the correct paths in the __main__ section.
 import os
 import glob
 import subprocess
-import process_photograph as pic
+import process_photograph
 import yaml
 from tqdm import tqdm
 
 def load_config(config_path=os.path.join(os.path.dirname(__file__), "config.yaml")):
     """
-    Loads configuration from YAML.
+    Load configuration from YAML file.
+    
     If the config file does not exist, creates a template and exits.
+    
+    Parameters
+    ----------
+    config_path : str, optional
+        Path to the configuration YAML file. Defaults to 'config.yaml' in the package directory.
+    
+    Returns
+    -------
+    dict
+        Configuration dictionary with keys: 'slicer_exe_path', 'mri_data_dir', 'pic_data_dir'
+    
+    Raises
+    ------
+    FileNotFoundError
+        If any of the paths specified in the config file do not exist.
     """
     
     # Check if config exists
@@ -32,20 +48,35 @@ def load_config(config_path=os.path.join(os.path.dirname(__file__), "config.yaml
     
     # Load config
     with open(config_path, "r") as f:
-        cfg = yaml.safe_load(f)
+        config = yaml.safe_load(f)
     
     # Check if paths exist
-    if not os.path.exists(cfg["slicer_exe_path"]):
-        raise FileNotFoundError(f"Slicer executable not found at '{cfg['slicer_exe_path']}'")
-    if not os.path.exists(cfg["mri_data_dir"]):
-        raise FileNotFoundError(f"Root directory not found at '{cfg['mri_data_dir']}'")
-    if not os.path.exists(cfg["pic_data_dir"]):
-        raise FileNotFoundError(f"Photograph root directory not found at '{cfg['pic_data_dir']}'")
+    if not os.path.exists(config["slicer_exe_path"]):
+        raise FileNotFoundError(f"Slicer executable not found at '{config['slicer_exe_path']}'")
+    if not os.path.exists(config["mri_data_dir"]):
+        raise FileNotFoundError(f"Root directory not found at '{config['mri_data_dir']}'")
+    if not os.path.exists(config["pic_data_dir"]):
+        raise FileNotFoundError(f"Photograph root directory not found at '{config['pic_data_dir']}'")
 
-    return cfg
+    return config
 
 def main_slicer_loop(mri_data_dir, pic_data_dir, slicer_executable, patient_dir_regex="RESP*", reprocess=False):
-    """Open each patient in 3D slicer for manual photo to MRI registration."""
+    """
+    Open each patient in 3D Slicer for manual photo to MRI registration.
+    
+    Parameters
+    ----------
+    mri_data_dir : str
+        Root directory containing FreeSurfer patient subdirectories (e.g., RESP001, RESP002, etc.)
+    pic_data_dir : str
+        Root directory containing photograph subdirectories matching patient IDs
+    slicer_executable : str
+        Path to the 3D Slicer executable
+    patient_dir_regex : str, optional
+        Glob pattern for patient directories. Defaults to "RESP*"
+    reprocess : bool, optional
+        If True, reprocess patients even if resection mask already exists. Defaults to False
+    """
 
     # Get patient dirs
     patient_dirs = sorted(glob.glob(os.path.join(mri_data_dir, patient_dir_regex)))
@@ -85,15 +116,15 @@ def main_slicer_loop(mri_data_dir, pic_data_dir, slicer_executable, patient_dir_
         # Draw masks
         if not os.path.exists(mask_path):
             # Find photograph path and copy to output dir
-            pic_path = pic.find_pic_path(patient_id, picture_root=pic_data_dir, copy_dir=output_dir, tqdm_handle=tqdm)
-            if pic_path:
+            photo_path = process_photograph.find_pic_path(patient_id, picture_root=pic_data_dir, copy_dir=output_dir, tqdm_handle=tqdm)
+            if photo_path:
                 tqdm.write(f"Drawing masks for {patient_id}...")
-                masks_drawn = pic.draw_photo_masks(pic_path, save_path=mask_path, tqdm_handle=tqdm)
+                masks_drawn = process_photograph.draw_photo_masks(photo_path, save_path=mask_path, tqdm_handle=tqdm)
             else:
                 masks_drawn = False
         else:
             tqdm.write(f"Masks already exist for {patient_id}, skipping drawing.")
-            pic_path = os.path.join(output_dir, f"{patient_id}_resection_photo.jpg")
+            photo_path = os.path.join(output_dir, f"{patient_id}_resection_photo.jpg")
             masks_drawn = True
 
         if not masks_drawn:
@@ -102,9 +133,9 @@ def main_slicer_loop(mri_data_dir, pic_data_dir, slicer_executable, patient_dir_
 
         # Plot photo with masks
         if not os.path.exists(figure_path):
-            pic.show_photo_with_masks(pic_path, mask_path, save_path=figure_path)
+            process_photograph.show_photo_with_masks(photo_path, mask_path, save_path=figure_path)
         # Open in viewer
-        viewer_pid = pic.open_image_viewer(figure_path)
+        viewer_process_id = process_photograph.open_image_viewer(figure_path)
 
         # Open Slicer and wait
         tqdm.write(f"Processing {patient_dir} in 3D Slicer...")
@@ -113,19 +144,19 @@ def main_slicer_loop(mri_data_dir, pic_data_dir, slicer_executable, patient_dir_
             "--python-script", os.path.join(os.path.dirname(__file__), "slicer_script.py"),
             "--t1_path", t1, "--ribbon_path", ribbon, "--lh_pial_path", lh_pial, "--rh_pial_path", rh_pial,
             "--lh_envelope_path", lh_envelope, "--rh_envelope_path", rh_envelope,
-            "--brain_envelope_path", brain_envelope, "--photo_path", pic_path,
+            "--brain_envelope_path", brain_envelope, "--photo_path", photo_path,
             "--mask_path", mask_path, "--output_dir", output_dir
         ])
         # Finished with Slicer, close photo
-        pic.close_image_viewer(viewer_pid)
+        process_photograph.close_image_viewer(viewer_process_id)
         # OK
         tqdm.write("\033[92mDONE\033[0m")
 
 if __name__ == "__main__":
     # Create or load config, set path variables
-    cfg = load_config()
-    slicer_exe_path = cfg["slicer_exe_path"]
-    mri_data_dir = cfg["mri_data_dir"]
-    pic_data_dir = cfg["pic_data_dir"]
+    config = load_config()
+    slicer_exe_path = config["slicer_exe_path"]
+    mri_data_dir = config["mri_data_dir"]
+    pic_data_dir = config["pic_data_dir"]
     # Run main function
     main_slicer_loop(mri_data_dir, pic_data_dir, slicer_exe_path)
