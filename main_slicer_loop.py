@@ -66,7 +66,7 @@ def main_slicer_loop(mri_data_dir, pic_data_dir, slicer_executable, patient_dir_
         output_dir = os.path.join(patient_dir, f"pic2mri_output")
         mask_path = os.path.join(output_dir, f"{patient_id}_photo_masks.npz")
         figure_path = os.path.join(output_dir, f"{patient_id}_photo_with_masks.png")
-        resection_mask_path = os.path.join(output_dir, f"{patient_id}_resection_mask.nii.gz")
+        resection_mask_path = os.path.join(output_dir, f"pic2mri_resection_mask.nii.gz")
 
         # Pass if missing photo directory
         if not os.path.exists(os.path.join(pic_data_dir, patient_id)):
