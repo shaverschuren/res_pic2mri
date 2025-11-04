@@ -1,17 +1,24 @@
 # slicer_script.py
-# Author: Sjors
-# Date: 14-10-2025
+# Author: Sjors Verschuren
+# Date: October 2025
 
 """
-Description: This script is intended to be run inside `3D Slicer` via the --python-script argument.
-It automates the loading and setup for manual registration of an intraoperative photograph to MRI.
+Slicer automation script for photo-to-MRI registration.
+
+This script is intended to be run inside 3D Slicer via the --python-script argument.
+It automates the loading and setup for manual registration of an intraoperative 
+photograph to MRI.
+
 Developed and tested with 3D Slicer 5.8.1 and SlicerFreeSurfer 05eccb9.
 
-- Loads: T1 volume, FreeSurfer pial surfaces, envelope surfaces (or creates them), intraoperative photograph
+Features:
+- Loads T1 volume, FreeSurfer pial surfaces, envelope surfaces (or creates them), 
+  and intraoperative photograph
 - Creates a textured plane with the photograph
-- Adds a linear transform so to interactively align the photo
-- Creates a markups curve and starts place mode for manual annotation
-- Exports curve control points (RAS coordinates) to CSV (when you call export function)
+- Adds a linear transform for interactive photo alignment
+- Provides keyboard shortcuts for common operations
+- Supports projection of aligned photo onto cortical surface
+- Exports volumetric resection masks
 """
 
 import os
