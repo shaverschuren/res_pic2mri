@@ -186,6 +186,7 @@ def draw_photo_masks(photo_path, save_path=None, tqdm_handle=None):
     plt.show()
 
     mask_done = [False]   # mutable flag for closure
+    abort = [False]       # mutable flag for aborting
 
     def polygon_to_mask(verts):
         path = Path(verts)
@@ -204,13 +205,22 @@ def draw_photo_masks(photo_path, save_path=None, tqdm_handle=None):
     def on_key(event):
         if event.key == "enter":
             mask_done[0] = True
+    
+    def on_close(event):
+        abort[0] = True
 
     fig.canvas.mpl_connect("key_press_event", on_key)
+    fig.canvas.mpl_connect("close_event", on_close)
 
     # Wait for ENTER after first polygon
     log("Draw resection area → double-click to close → press ENTER to continue.")
-    while not mask_done[0]:
+    while not mask_done[0] and not abort[0]:
         plt.pause(0.1)
+
+    if abort[0]:
+        plt.close(fig)
+        log("Mask drawing aborted by user.")
+        return False
 
     selector.disconnect_events()
     mask_done[0] = False

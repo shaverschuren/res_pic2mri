@@ -8,6 +8,7 @@ To use, make sure to set the correct paths in the __main__ section.
 import os
 import glob
 import subprocess
+import sys
 import process_photograph
 import yaml
 from tqdm import tqdm
@@ -100,9 +101,17 @@ def main_slicer_loop(mri_data_dir, pic_data_dir, slicer_executable, patient_dir_
         resection_mask_path = os.path.join(output_dir, f"pic2mri_resection_mask.nii.gz")
         atlas_based_flag_path = os.path.join(output_dir, "atlas_based.txt")
 
+        # Print start
+        tqdm.write(f"\n====== {patient_id}: Start processing ======\n")
+
         # Pass if missing photo directory
         if not os.path.exists(os.path.join(pic_data_dir, patient_id)):
             tqdm.write(f"No photograph data found for {patient_id}, skipping patient.")
+            continue
+
+        # Pass if missing FreeSurfer data
+        if not os.path.exists(t1) or not os.path.exists(ribbon) or not os.path.exists(lh_pial) or not os.path.exists(rh_pial):
+            tqdm.write(f"Missing FreeSurfer data for {patient_id}, skipping patient.")
             continue
 
         # Pass if resection mask already exists
@@ -139,13 +148,14 @@ def main_slicer_loop(mri_data_dir, pic_data_dir, slicer_executable, patient_dir_
 
         # Plot photo with masks
         if not os.path.exists(figure_path):
-            process_photograph.show_photo_with_masks(photo_path, mask_path, save_path=figure_path)
+            process_photograph.show_photo_with_masks(photo_path, mask_path, save_path=figure_path, tqdm_handle=tqdm)
         # Open in viewer
         viewer_process_id = process_photograph.open_image_viewer(figure_path)
 
         # Open Slicer and wait
-        tqdm.write(f"Processing {patient_dir} in 3D Slicer...")
-        subprocess.run([
+        sys.stdout.write(f"\rProcessing {patient_dir} in 3D Slicer...\033[K")
+        sys.stdout.flush()
+        result = subprocess.run([
             slicer_executable,
             "--python-script", os.path.join(os.path.dirname(__file__), "slicer_script.py"),
             "--t1_path", t1, "--ribbon_path", ribbon, "--lh_pial_path", lh_pial, "--rh_pial_path", rh_pial,
@@ -155,8 +165,21 @@ def main_slicer_loop(mri_data_dir, pic_data_dir, slicer_executable, patient_dir_
         ])
         # Finished with Slicer, close photo
         process_photograph.close_image_viewer(viewer_process_id)
-        # OK
-        tqdm.write("\033[92mDONE\033[0m")
+
+        # Check result and report
+        if result.returncode == 0:
+            sys.stdout.write(f"\rProcessing {patient_dir} in 3D Slicer... \033[92mDONE\033[0m\033[K\n")
+            sys.stdout.flush()
+        elif result.returncode == 1:
+            sys.stdout.write(f"\rProcessing {patient_dir} in 3D Slicer... \033[93mFAILED\033[0m\033[K\n")
+            sys.stdout.flush()
+        elif result.returncode == 2:
+            sys.stdout.write(f"\rProcessing {patient_dir} in 3D Slicer... \033[94mLOOP ABORTED\033[0m\033[K\n")
+            sys.stdout.flush()
+            break
+        else:
+            sys.stdout.write(f"\rProcessing {patient_dir} in 3D Slicer... \033[91mUNKNOWN RETURN CODE {result.returncode}\033[0m\033[K\n")
+            sys.stdout.flush()
 
 if __name__ == "__main__":
     # Create or load config, set path variables

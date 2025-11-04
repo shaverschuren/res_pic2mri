@@ -2,6 +2,7 @@
 UI, camera, and interaction handling for 3D Slicer.
 """
 
+import sys
 import numpy as np
 import vtk
 import qt  # type: ignore
@@ -491,6 +492,10 @@ def setup_interactor(Nodes, plane_dims, photo_mask_path, MainProjection, transfo
                 save_scene_to_directory(scene_path, Nodes)
             # Quit application
             app.quit()
+        # Exit program with return code 2 with "escape" key to break loop
+        elif key == "Escape":
+            # Quit application
+            sys.exit(2)
         # Ignore other keys
         else:
             return
