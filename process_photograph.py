@@ -1,16 +1,15 @@
 import os
 import glob
 import shutil
+import subprocess
+import platform
 import numpy as np
 import matplotlib.pyplot as plt
 from PIL import Image
-import matplotlib.pyplot as plt
 from matplotlib.widgets import PolygonSelector
 from matplotlib.path import Path
 import tkinter as tk
 from tkinter import filedialog
-import subprocess, platform
-from tqdm import tqdm
 
 def open_image_viewer(path):
     system = platform.system()
