@@ -51,7 +51,8 @@ def create_envelopes(lh_pialNode, rh_pialNode, surf_dir):
     write_stl_surface(rh_pialNode, os.path.join(surf_dir, "rh_pial.stl"))
 
     # Now run the MATLAB script to create envelope from STL
-    matlab_scripts_root = "L:\\her_knf_golf\\Wetenschap\\newtransport\\Sjors\\scripts_other\\res_pic2mri\\MATLAB"
+    # Find MATLAB directory relative to this script's location
+    matlab_scripts_root = os.path.join(os.path.dirname(os.path.abspath(__file__)), "MATLAB")
     result = subprocess.run(
         [
             "matlab", "-batch",
