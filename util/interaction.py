@@ -387,6 +387,9 @@ def setup_interactor(Nodes, plane_dims, photo_mask_path, MainProjection, transfo
     # Get app
     app = slicer.app
 
+    # Initialize quit flag
+    quit_once = False
+
     # Set up keypress observer
     def onKeyPress(interactor):
 
@@ -466,7 +469,6 @@ def setup_interactor(Nodes, plane_dims, photo_mask_path, MainProjection, transfo
                 # Save scene
                 scene_path = os.path.join(output_dir, "scene")
                 save_scene_to_directory(scene_path, Nodes)
-
             else:
                 print("No segmentationNode found to save.")
         # Exit program and label as atlas-based mask with "x" key
@@ -475,7 +477,7 @@ def setup_interactor(Nodes, plane_dims, photo_mask_path, MainProjection, transfo
             with open(os.path.join(output_dir, "atlas_based.txt"), "w") as f:
                 f.write("This subject uses an atlas-based resection mask.\n")
             # Quit app
-            app.quit()
+            sys.exit(0)
         # Exit program with "q" key
         elif key == "q":
             # Check whether to save before quitting
@@ -484,14 +486,20 @@ def setup_interactor(Nodes, plane_dims, photo_mask_path, MainProjection, transfo
                 os.path.exists(os.path.join(output_dir, "resection_mask.nii.gz")) \
                 and os.path.exists(os.path.join(output_dir, "scene"))
             ):
-                # Save resection mask to output directory
-                output_nifti_path = os.path.join(output_dir, "resection_mask.nii.gz")
-                surf2vol.save_resection_mask(segmentationNode, output_nifti_path)
-                # Save scene
-                scene_path = os.path.join(output_dir, "scene")
-                save_scene_to_directory(scene_path, Nodes)
-            # Quit application
-            app.quit()
+                nonlocal quit_once
+                if not quit_once:
+                    print("Don't forget to save your resection mask and scene before quitting! (press 's')")
+                    print("Press 'q' again to quit without saving.")
+                    quit_once = True
+                else:
+                    print("Exiting application without saving.")
+                    sys.exit(1)
+            elif not segmentationNode:
+                print("Exiting without results to save.")
+                sys.exit(1)
+            else:
+                print("Exiting application.")
+                sys.exit(0)
         # Exit program with return code 2 with "escape" key to break loop
         elif key == "Escape":
             # Quit application

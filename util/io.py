@@ -121,5 +121,6 @@ def save_scene_to_directory(directory_path, Nodes):
     image = slicer.app.layoutManager().threeDWidget(0).threeDView().grab()
     screenshot_path = os.path.join(directory_path, "scene_screenshot.png")
     image.save(screenshot_path)
+    print(f"Saved scene screenshot to: {screenshot_path}")
 
     return success
