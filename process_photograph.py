@@ -111,9 +111,11 @@ def find_pic_path(patient_id, picture_root, copy_dir=None, tqdm_handle=None):
             return expected_path
 
     # Else, search further: Define search pattern and find files
-    search_pattern = os.path.join(patient_root, f"*post*.jpg")
-    search_pattern_alt = os.path.join(patient_root, f"*Post*.jpg")
-    matching_files = glob.glob(search_pattern) + glob.glob(search_pattern_alt)
+    search_pattern_1 = os.path.join(patient_root, f"*post*.jpg")
+    search_pattern_2 = os.path.join(patient_root, f"*Post*.jpg")
+    search_pattern_3 = os.path.join(patient_root, f"*post*.png")
+    search_pattern_4 = os.path.join(patient_root, f"*Post*.png")
+    matching_files = glob.glob(search_pattern_1) + glob.glob(search_pattern_2) + glob.glob(search_pattern_3) + glob.glob(search_pattern_4)
     if len(matching_files) == 1:
         matching_file = matching_files[0]
     else:
@@ -128,7 +130,7 @@ def find_pic_path(patient_id, picture_root, copy_dir=None, tqdm_handle=None):
         matching_file = filedialog.askopenfilename(
             title=f"Select post-resection photograph for patient {patient_id}",
             initialdir=patient_root,
-            filetypes=[("JPEG files", "*.jpg *.jpeg"), ("PNG files", "*.png"), ("All files", "*.*")]
+            filetypes=[("All files", "*.*"), ("JPEG files", "*.jpg *.jpeg"), ("PNG files", "*.png")]
         )
         if not matching_file:
             log("No file selected. Aborting patient.")
