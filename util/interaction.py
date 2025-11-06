@@ -483,7 +483,7 @@ def setup_interactor(Nodes, plane_dims, photo_mask_path, MainProjection, transfo
             # Check whether to save before quitting
             segmentationNode = Nodes.get('segmentationNode', None)
             if segmentationNode and not (
-                os.path.exists(os.path.join(output_dir, "resection_mask.nii.gz")) \
+                os.path.exists(os.path.join(output_dir, "pic2mri_resection_mask.nii.gz")) \
                 and os.path.exists(os.path.join(output_dir, "scene"))
             ):
                 nonlocal quit_once
