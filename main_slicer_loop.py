@@ -61,7 +61,7 @@ def load_config(config_path=os.path.join(os.path.dirname(__file__), "config.yaml
 
     return config
 
-def main_slicer_loop(mri_data_dir, pic_data_dir, slicer_executable, patient_dir_regex="RESP*", reprocess=False):
+def main_slicer_loop(mri_data_dir, pic_data_dir, slicer_executable, patient_dir_regex="RESP*", reprocess=False, process_only_photo=False):
     """
     Open each patient in 3D Slicer for manual photo to MRI registration.
     
@@ -110,7 +110,8 @@ def main_slicer_loop(mri_data_dir, pic_data_dir, slicer_executable, patient_dir_
             continue
 
         # Pass if missing FreeSurfer data
-        if not os.path.exists(t1) or not os.path.exists(ribbon) or not os.path.exists(lh_pial) or not os.path.exists(rh_pial):
+        if (not os.path.exists(t1) or not os.path.exists(ribbon) or not os.path.exists(lh_pial) or not os.path.exists(rh_pial)) \
+            and not process_only_photo:
             tqdm.write(f"Missing FreeSurfer data for {patient_id}, skipping patient.")
             continue
 
@@ -149,6 +150,11 @@ def main_slicer_loop(mri_data_dir, pic_data_dir, slicer_executable, patient_dir_
         # Plot photo with masks
         if not os.path.exists(figure_path):
             process_photograph.show_photo_with_masks(photo_path, mask_path, save_path=figure_path, tqdm_handle=tqdm)
+        
+        if process_only_photo:
+            tqdm.write(f"Only processing photograph for {patient_id}, skipping Slicer step.")
+            continue
+
         # Open in viewer
         viewer_process_id = process_photograph.open_image_viewer(figure_path)
 
