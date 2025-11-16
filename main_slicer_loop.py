@@ -100,6 +100,7 @@ def main_slicer_loop(mri_data_dir, pic_data_dir, slicer_executable, patient_dir_
         figure_path = os.path.join(output_dir, f"{patient_id}_photo_with_masks.png")
         resection_mask_path = os.path.join(output_dir, f"pic2mri_resection_mask.nii.gz")
         atlas_based_flag_path = os.path.join(output_dir, "atlas_based.txt")
+        skip_flag_path = os.path.join(output_dir, "skip.txt")
 
         # Print start
         tqdm.write(f"\n====== {patient_id}: Start processing ======\n")
@@ -123,6 +124,11 @@ def main_slicer_loop(mri_data_dir, pic_data_dir, slicer_executable, patient_dir_
         # Pass if atlas-based flag exists
         if os.path.exists(atlas_based_flag_path) and not reprocess:
             tqdm.write(f"Atlas-based resection mask flagged for {patient_id}, skipping patient.")
+            continue
+    
+        # Pass if skip flag exists
+        if os.path.exists(skip_flag_path) and not reprocess:
+            tqdm.write(f"Skip flag found for {patient_id}, skipping patient.")
             continue
 
         # Create output dir if needed

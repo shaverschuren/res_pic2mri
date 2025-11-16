@@ -43,6 +43,10 @@ def slicer_loop(root_dir, slicer_executable):
         rh_envelope = os.path.join(patient_dir, "surf", "rh_envelope.stl")
         brain_envelope = os.path.join(patient_dir, "surf", "brain_envelope.stl")
 
+        if not os.path.exists(t1) or not os.path.exists(lh_pial) or not os.path.exists(rh_pial):
+            tqdm.write(f"Missing required MRI/surface files for {patient_id}, skipping patient.")
+            continue
+
         if not os.path.exists(lh_envelope) or not os.path.exists(rh_envelope) or not os.path.exists(brain_envelope):
             # Open Slicer and wait
             tqdm.write(f"Processing {patient_dir} in 3D Slicer...")
