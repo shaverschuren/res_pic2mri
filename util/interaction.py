@@ -366,6 +366,8 @@ def setup_interactor(Nodes, plane_dims, photo_mask_path, MainProjection, transfo
     - 'v': Create volumetric resection mask from aligned surfaces
     - 's': Save scene and resection mask
     - 'q': Quit Slicer
+    - 'x': Mark as atlas-based and quit Slicer
+    - 'Escape': Quit Slicer and break outside loop
     
     Parameters
     ----------

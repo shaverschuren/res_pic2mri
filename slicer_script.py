@@ -474,7 +474,8 @@ def main(t1_path, ribbon_path, lh_pial_path, rh_pial_path, lh_envelope_path, rh_
     globals()['mask_path'] = mask_path
 
     print("\n==============================================================================\n")
-    print("Setup complete. You can now interactively align the photo projection and draw the resection curve.")
+    print("Setup complete. You can now interactively align the photo projection.")
+    print("Also check the right panel for adjustable projection parameters.")
     print("Press <enter> to drop in projection + interactor in current view.")
     print("Press <space> to align the 3D camera with the projection plane.")
     print("Press '1' to toggle the 3D model view.")
@@ -483,6 +484,8 @@ def main(t1_path, ribbon_path, lh_pial_path, rh_pial_path, lh_envelope_path, rh_
     print("Press 'v' to create volumetric resection mask.")
     print("Press 's' to save the current scene and resection mask.")
     print("Press 'q' to quit Slicer when done.")
+    print("Press 'x' to mark as atlas-based and quit Slicer.")
+    print("Press 'Escape' to quit Slicer and break outside loop.")
     print("\n==============================================================================\n")
 
 if __name__ == "__main__":
