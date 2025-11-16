@@ -301,7 +301,7 @@ def setup_ui_widgets(MainProjection, transformObserver, transformNode,
     toggle.text = "Snap to surface"
     toggle.setChecked(True)
     toggle.setToolTip("Enable/disable dragging constrained to surface")
-    formLayout.addRow("Mode:", toggle)
+    formLayout.addRow("Transform mode:", toggle)
 
     # --- Make a dock widget ---
     dockWidget = qt.QDockWidget("Projector Control")
@@ -346,9 +346,45 @@ def setup_ui_widgets(MainProjection, transformObserver, transformNode,
 
     toggle.connect('toggled(bool)', onToggle)
 
+    # --- Projection depth slider ---
+    depthSlider = ctk.ctkSliderWidget()
+    depthSlider.minimum = 1
+    depthSlider.maximum = 50
+    depthSlider.value = 20
+    depthSlider.singleStep = 1
+    depthSlider.decimals = 0
+    depthSlider.setFixedWidth(300)
+    depthSlider.setToolTip("Projection depth for surface-to-volume mask (mm)")
+    formLayout.addRow("Surf2vol depth (mm):", depthSlider)
+
+    # Store in global so surf2vol can read it later
+    globals()["surf2vol_depth_mm"] = 20.
+
+    def onDepthChanged(value):
+        globals()["surf2vol_depth_mm"] = float(value)
+
+    depthSlider.connect('valueChanged(double)', onDepthChanged)
+
+    # --- Include-white-matter toggle ---
+    includeWM = qt.QCheckBox()
+    includeWM.setChecked(False)
+    includeWM.text = "Include white matter"
+    includeWM.setToolTip(
+        "If enabled, projection includes white matter; otherwise only gray matter "
+        "with morphological closing."
+    )
+    formLayout.addRow("Surf2vol mode:", includeWM)
+
+    # Store the setting
+    globals()["surf2vol_include_wm"] = False
+    def onIncludeWM(state):
+        globals()["surf2vol_include_wm"] = bool(state)
+
+    includeWM.stateChanged.connect(onIncludeWM)
+
     print("[UI] Added 'Projector Control' dock below 3D view")
 
-    return slider, toggle, dockWidget
+    return slider, toggle, depthSlider, includeWM, dockWidget
 
 def setup_interactor(Nodes, plane_dims, photo_mask_path, MainProjection, transformObserver, output_dir):
     """
@@ -451,8 +487,10 @@ def setup_interactor(Nodes, plane_dims, photo_mask_path, MainProjection, transfo
         # Make volumetric resection mask from aligned surfaces.
         elif key == "v":
             # Generate segmentation from ribbon and brain envelope
+            depth = globals().get('surf2vol_depth_mm', 20)
+            include_wm = globals().get('surf2vol_include_wm', True)
             segmentationNode = surf2vol.project_surface_to_volume_mask(
-                Nodes["brain_envelopeNode"], Nodes["ribbonNode"]
+                Nodes["brain_envelopeNode"], Nodes["ribbonNode"], max_depth_mm=depth, include_wm=include_wm
             )
             # Store globally for access
             globals()['segmentationNode'] = segmentationNode

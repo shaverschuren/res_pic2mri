@@ -443,7 +443,7 @@ def main(t1_path, ribbon_path, lh_pial_path, rh_pial_path, lh_envelope_path, rh_
     )
 
     # Setup slider to control projection camera distance
-    cam_dist_slider, observer_toggle, _ = util.setup_ui_widgets(
+    cam_dist_slider, observer_toggle, depth_slider, include_wm_checkbox, _ = util.setup_ui_widgets(
         MainProjection, transformObserver, transformNode,
         min_mm=1.0, max_mm=300.0, initial_mm=150.0
     )
@@ -470,6 +470,8 @@ def main(t1_path, ribbon_path, lh_pial_path, rh_pial_path, lh_envelope_path, rh_
     globals()['transformObserver'] = transformObserver
     globals()['cam_dist_slider'] = cam_dist_slider
     globals()['observer_toggle'] = observer_toggle
+    globals()['depth_slider'] = depth_slider
+    globals()['include_wm_checkbox'] = include_wm_checkbox
     globals()['output_dir'] = output_dir
     globals()['mask_path'] = mask_path
 

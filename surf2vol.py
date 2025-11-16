@@ -4,9 +4,10 @@ import vtk
 from vtkmodules.util import numpy_support
 from scipy.ndimage import binary_closing
 
-def project_surface_to_volume_mask(surfaceNode, ribbonVolumeNode, max_depth_mm=20.0, target_rgb=(1,128,1),
-                                     gm_labels=[3, 42], scalar_name="ProjectedPhoto", samples=None,
-                                     morph_closing=True, closing_radius_mm=3., visualize=True):
+def project_surface_to_volume_mask(surfaceNode, ribbonVolumeNode, max_depth_mm=20.0, include_wm=True,
+                                   target_rgb=(1,128,1), gm_labels=[3, 42], wm_labels=[2, 41],
+                                   scalar_name="ProjectedPhoto", samples=None,
+                                   morph_closing=True, closing_radius_mm=3., visualize=True):
     """
     Projects a color-coded surface mask (RGB) into a grey matter volume
     strictly along the surface normals, using specified GM labels.
@@ -19,10 +20,14 @@ def project_surface_to_volume_mask(surfaceNode, ribbonVolumeNode, max_depth_mm=2
         Volume containing grey matter labels (e.g., ribbon.mgz).
     max_depth_mm : float
         Maximum distance along normals to project.
+    include_wm : bool
+        Whether to include white matter labels in the projection.
     target_rgb : tuple
         RGB color of surface mask to select.
     gm_labels : list of int
         Grey matter labels in the volume to consider.
+    wm_labels : list of int
+        White matter labels in the volume to consider if include_wm is True.
     scalar_name : str
         Name of the scalar array on the surface.
     samples : int | None
@@ -35,10 +40,13 @@ def project_surface_to_volume_mask(surfaceNode, ribbonVolumeNode, max_depth_mm=2
         Whether to visualize the resulting mask in Slicer.
     """
 
+    # Setup default samples
     if samples is None:
         samples = int(max_depth_mm * 2)  # 0.5 mm steps
 
-    print(f"Projecting surface mask along normals into grey matter volume up to {max_depth_mm} mm depth...")
+    # Announce
+    volume_type = "grey matter" if not include_wm else "grey and white matter"
+    print(f"Projecting surface mask along normals into {volume_type} volume up to {max_depth_mm} mm depth...")
 
     print("--> Masking surface data...")
     # --- Extract RGB scalar array ---
@@ -74,6 +82,10 @@ def project_surface_to_volume_mask(surfaceNode, ribbonVolumeNode, max_depth_mm=2
     mask_array = np.zeros_like(ribbon_array, dtype=np.uint8)
 
     print("--> Projecting along normals...")
+    # --- Prepare label list ---
+    projection_labels = gm_labels.copy()
+    if include_wm:
+        projection_labels.extend(wm_labels)
     # --- Sample along normals ---
     for pt, nrm in zip(points, normals):
         for t in np.linspace(0, max_depth_mm, samples):
@@ -84,7 +96,7 @@ def project_surface_to_volume_mask(surfaceNode, ribbonVolumeNode, max_depth_mm=2
             if (0 <= i < ribbon_array.shape[0] and
                 0 <= j < ribbon_array.shape[1] and
                 0 <= k < ribbon_array.shape[2]):
-                if any(np.abs(ribbon_array[i,j,k] - label) <= 1e-2 for label in gm_labels):
+                if any(np.abs(ribbon_array[i,j,k] - label) <= 1e-2 for label in projection_labels):
                     mask_array[i,j,k] = 1
         slicer.app.processEvents()  # Keep UI responsive
 
