@@ -87,6 +87,8 @@ class Projection:
         # Upsample model if requested
         if self.upsample_iterations is not None:
             subdivide_model(self.modelNode, iterations=self.upsample_iterations)
+            print(f"[Projection] Upsampled model '{self.modelNode.GetName()}' "
+                  f"with {self.upsample_iterations} iterations.")
 
         # Get model polydata and display node
         self.displayNode = self.modelNode.GetDisplayNode()

@@ -87,15 +87,15 @@ def main_slicer_loop(mri_data_dir, pic_data_dir, slicer_executable, patient_dir_
     for patient_dir in tqdm(patient_dirs, desc="Processing patients:", unit="pt"):
         # Get paths
         patient_id = os.path.split(os.path.basename(patient_dir))[-1]
-        # t1 = os.path.join(patient_dir, "mri", "orig", "001.mgz")
-        t1 = os.path.join(patient_dir, "mri", "T1.mgz")
-        ribbon = os.path.join(patient_dir, "mri", "ribbon.mgz")
-        lh_pial = os.path.join(patient_dir, "surf", "lh.pial")
-        rh_pial = os.path.join(patient_dir, "surf", "rh.pial")
-        lh_envelope = os.path.join(patient_dir, "surf", "lh_envelope.stl")
-        rh_envelope = os.path.join(patient_dir, "surf", "rh_envelope.stl")
-        brain_envelope = os.path.join(patient_dir, "surf", "brain_envelope.stl")
         output_dir = os.path.join(patient_dir, f"pic2mri_output")
+        fs_dir = os.path.join(patient_dir, "FreeSurfer") if os.path.exists(os.path.join(patient_dir, "FreeSurfer")) else os.path.join(patient_dir, "FastSurfer")
+        t1s = [os.path.join(fs_dir, "mri", fname) for fname in ["T1.mgz", "T1.nii", "T1.nii.gz"]]
+        ribbons = [os.path.join(fs_dir, "mri", fname) for fname in ["ribbon.mgz", "ribbon.nii", "ribbon.nii.gz"]]
+        lh_pials = [os.path.join(fs_dir, "surf", "lh.pial.T1"), os.path.join(fs_dir, "surf", "lh.pial")]
+        rh_pials = [os.path.join(fs_dir, "surf", "rh.pial.T1"), os.path.join(fs_dir, "surf", "rh.pial")]
+        lh_envelope = os.path.join(patient_dir, "lh_envelope.stl")
+        rh_envelope = os.path.join(patient_dir, "rh_envelope.stl")
+        brain_envelope = os.path.join(patient_dir, "brain_envelope.stl")
         mask_path = os.path.join(output_dir, f"{patient_id}_photo_masks.npz")
         figure_path = os.path.join(output_dir, f"{patient_id}_photo_with_masks.png")
         resection_mask_path = os.path.join(output_dir, f"pic2mri_resection_mask.nii.gz")
@@ -111,6 +111,10 @@ def main_slicer_loop(mri_data_dir, pic_data_dir, slicer_executable, patient_dir_
             continue
 
         # Pass if missing FreeSurfer data
+        t1 = next((path for path in t1s if os.path.exists(path)), None)
+        ribbon = next((path for path in ribbons if os.path.exists(path)), None)
+        lh_pial = next((path for path in lh_pials if os.path.exists(path)), None)
+        rh_pial = next((path for path in rh_pials if os.path.exists(path)), None)
         if (not os.path.exists(t1) or not os.path.exists(ribbon) or not os.path.exists(lh_pial) or not os.path.exists(rh_pial)) \
             and not process_only_photo:
             tqdm.write(f"Missing FreeSurfer data for {patient_id}, skipping patient.")
@@ -129,6 +133,11 @@ def main_slicer_loop(mri_data_dir, pic_data_dir, slicer_executable, patient_dir_
         # Pass if skip flag exists
         if os.path.exists(skip_flag_path) and not reprocess:
             tqdm.write(f"Skip flag found for {patient_id}, skipping patient.")
+            continue
+
+        # TODO: Remove
+        if os.path.exists(os.path.join(output_dir, "brain_envelope.vtk")) and not reprocess:
+            tqdm.write(f"Registration already done for {patient_id}, skipping patient.")
             continue
 
         # Create output dir if needed

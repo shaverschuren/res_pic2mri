@@ -36,13 +36,17 @@ def slicer_loop(root_dir, slicer_executable):
     for patient_dir in tqdm(patient_dirs, desc="Processing patients", unit="pt"):
         # Get paths
         patient_id = os.path.split(os.path.basename(patient_dir))[-1]
-        t1 = os.path.join(patient_dir, "mri", "T1.nii")
-        lh_pial = os.path.join(patient_dir, "surf", "lh.pial")
-        rh_pial = os.path.join(patient_dir, "surf", "rh.pial")
-        lh_envelope = os.path.join(patient_dir, "surf", "lh_envelope.stl")
-        rh_envelope = os.path.join(patient_dir, "surf", "rh_envelope.stl")
-        brain_envelope = os.path.join(patient_dir, "surf", "brain_envelope.stl")
+        fs_dir = os.path.join(patient_dir, "FreeSurfer") if os.path.exists(os.path.join(patient_dir, "FreeSurfer")) else os.path.join(patient_dir, "FastSurfer")
+        t1s = [os.path.join(fs_dir, "mri", fname) for fname in ["T1.mgz", "T1.nii", "T1.nii.gz"]]
+        lh_pials = [os.path.join(fs_dir, "surf", "lh.pial.T1"), os.path.join(fs_dir, "surf", "lh.pial")]
+        rh_pials = [os.path.join(fs_dir, "surf", "rh.pial.T1"), os.path.join(fs_dir, "surf", "rh.pial")]
+        lh_envelope = os.path.join(patient_dir, "lh_envelope.stl")
+        rh_envelope = os.path.join(patient_dir, "rh_envelope.stl")
+        brain_envelope = os.path.join(patient_dir, "brain_envelope.stl")
 
+        t1 = next((path for path in t1s if os.path.exists(path)), None)
+        lh_pial = next((path for path in lh_pials if os.path.exists(path)), None)
+        rh_pial = next((path for path in rh_pials if os.path.exists(path)), None)
         if not os.path.exists(t1) or not os.path.exists(lh_pial) or not os.path.exists(rh_pial):
             tqdm.write(f"Missing required MRI/surface files for {patient_id}, skipping patient.")
             continue
