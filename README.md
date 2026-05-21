@@ -1,4 +1,4 @@
-# res_pic2mri
+# Slicer Photo2Cortex
 
 Utilities and scripts for streamlined manual registration of intraoperative resection photographs to MRI-derived cortical models in 3D Slicer.
 
