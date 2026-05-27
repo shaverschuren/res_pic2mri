@@ -70,7 +70,7 @@ def create_envelopes(lh_pialNode, rh_pialNode, surf_dir):
     result = subprocess.run(
         [
             "matlab", "-batch",
-            f"addpath('{matlab_scripts_root}', '{os.path.join(matlab_scripts_root, 'Functions')}'); create_envelopes('{surf_dir}')"
+            f"restoredefaultpath; addpath('{matlab_scripts_root}', '{os.path.join(matlab_scripts_root, 'Functions')}'); create_envelopes('{surf_dir}')"
         ],
         capture_output=True, text=True
     )
