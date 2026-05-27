@@ -88,7 +88,7 @@ def main_slicer_loop(mri_data_dir, pic_data_dir, slicer_executable, patient_dir_
         # Get paths
         patient_id = os.path.split(os.path.basename(patient_dir))[-1]
         output_dir = os.path.join(patient_dir, f"pic2mri_output")
-        fs_dir = os.path.join(patient_dir, "FreeSurfer") if os.path.exists(os.path.join(patient_dir, "FreeSurfer")) else os.path.join(patient_dir, "FastSurfer")
+        fs_dir = patient_dir  # Assuming FreeSurfer outputs are directly in the patient directory
         t1s = [os.path.join(fs_dir, "mri", fname) for fname in ["T1.mgz", "T1.nii", "T1.nii.gz"]]
         ribbons = [os.path.join(fs_dir, "mri", fname) for fname in ["ribbon.mgz", "ribbon.nii", "ribbon.nii.gz"]]
         lh_pials = [os.path.join(fs_dir, "surf", "lh.pial.T1"), os.path.join(fs_dir, "surf", "lh.pial")]

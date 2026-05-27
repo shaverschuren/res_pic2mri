@@ -36,7 +36,7 @@ def slicer_loop(root_dir, slicer_executable):
     for patient_dir in tqdm(patient_dirs, desc="Processing patients", unit="pt"):
         # Get paths
         patient_id = os.path.split(os.path.basename(patient_dir))[-1]
-        fs_dir = os.path.join(patient_dir, "FreeSurfer") if os.path.exists(os.path.join(patient_dir, "FreeSurfer")) else os.path.join(patient_dir, "FastSurfer")
+        fs_dir = patient_dir  # Assuming FreeSurfer outputs are directly in the patient directory
         t1s = [os.path.join(fs_dir, "mri", fname) for fname in ["T1.mgz", "T1.nii", "T1.nii.gz"]]
         lh_pials = [os.path.join(fs_dir, "surf", "lh.pial.T1"), os.path.join(fs_dir, "surf", "lh.pial")]
         rh_pials = [os.path.join(fs_dir, "surf", "rh.pial.T1"), os.path.join(fs_dir, "surf", "rh.pial")]
